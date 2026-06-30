@@ -6,7 +6,9 @@ import { sharedCookieOptions } from "@/lib/supabase/cookies";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/app";
+  // Only allow same-origin relative paths (one leading slash, not "//evil.com").
+  const rawNext = searchParams.get("next") ?? "/app";
+  const next = /^\/[^/]/.test(rawNext) ? rawNext : "/app";
 
   if (code) {
     const cookieStore = await cookies();

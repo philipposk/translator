@@ -1,17 +1,26 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import { AuthButton } from "@/components/AuthButton";
+import { InstallButton } from "@/components/InstallButton";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Translator — Speak it, get clean text in any language",
-  description: "Voice-to-text translation. Speak in any language, get clean translated text instantly.",
+  description: "Live voice, text, file and camera translation. Speak, type, upload or point your camera — get instant translation.",
   applicationName: "Translator",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Translator" },
+  icons: { icon: "/icons/icon-192.png", apple: "/icons/icon-192.png" },
 };
 
-export const viewport: Viewport = { themeColor: "#07070a" };
+export const viewport: Viewport = {
+  themeColor: "#07070a",
+  viewportFit: "cover",
+  width: "device-width",
+  initialScale: 1,
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -20,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <nav style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }} className="px-6 py-4 flex items-center justify-between">
           <span style={{ color: "var(--accent)", fontWeight: 700, fontSize: "1.1rem" }}>Translator</span>
           <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <InstallButton />
             <a href="https://6x7.gr" style={{ color: "var(--fg-muted)", fontSize: "0.8rem" }}>by 6x7.gr</a>
             <AuthButton />
           </div>

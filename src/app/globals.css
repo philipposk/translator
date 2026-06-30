@@ -51,3 +51,37 @@ body {
 .btn-primary:hover { opacity: 0.85; }
 .btn-ghost { background: rgba(255,255,255,0.05); color: var(--fg); border: 1px solid var(--border); }
 .btn-ghost:hover { background: rgba(255,255,255,0.1); }
+.btn:disabled { cursor: not-allowed; }
+
+/* Two-pane translate layouts: stacked on mobile, side-by-side on desktop. */
+.tr-two-pane {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+@media (min-width: 768px) {
+  .tr-two-pane { grid-template-columns: 1fr 1fr; }
+}
+
+/* Live conversation: two panels stacked (original top / translation bottom on
+   mobile). The face-to-face flip rotates the top panel 180°. */
+.tr-live-stack {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 0.75rem;
+  min-height: 60vh;
+}
+.tr-flip { transform: rotate(180deg); }
+
+.tr-spin {
+  display: inline-block;
+  width: 0.9rem; height: 0.9rem;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: tr-spin 0.7s linear infinite;
+}
+@keyframes tr-spin { to { transform: rotate(360deg); } }
+
+@keyframes tr-pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
+.tr-pulse { animation: tr-pulse 1.2s ease-in-out infinite; }

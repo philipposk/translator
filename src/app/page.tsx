@@ -1,9 +1,10 @@
 const LANGUAGES = ["Greek", "Spanish", "French", "Japanese", "Arabic", "German", "Portuguese", "Mandarin"];
 
 const FEATURES = [
-  { icon: "🎙️", title: "Speak naturally", body: "Tap the mic and speak. Any accent, any pace. No need to type." },
-  { icon: "🌍", title: "40+ languages", body: "From Greek to Japanese. Translate into any language in real time." },
-  { icon: "✨", title: "Clean output", body: "Get readable, properly punctuated text — not raw transcript noise." },
+  { icon: "🎙️", title: "Live voice", body: "Point your mic at a speaker for instant captions, or run a two-sided conversation — one side flips 180° so you can sit opposite." },
+  { icon: "⌨️", title: "Text & files", body: "Paste text for instant translation, or drop an audio/video file and get a translated transcript." },
+  { icon: "📷", title: "Camera", body: "Point your camera at a sign, menu or document — it reads the text and translates it on the spot." },
+  { icon: "📲", title: "Installable app", body: "Add it to your home screen. Works like a native app, online anywhere." },
 ];
 
 export default function Home() {
@@ -14,13 +15,13 @@ export default function Home() {
           Voice translation
         </p>
         <h1 style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", fontWeight: 800, lineHeight: 1.1, letterSpacing: "-0.02em", marginBottom: "1.25rem" }}>
-          Speak it, get clean text
+          Translate anything,
           <br />
           <span style={{ color: "var(--accent)" }}>in any language.</span>
         </h1>
         <p style={{ color: "var(--fg-muted)", fontSize: "1.1rem", lineHeight: 1.6, maxWidth: "36rem", marginBottom: "1.5rem" }}>
-          Tap the microphone, speak in your language, and get a clean translated transcript instantly.
-          No typing, no copying, no fuss.
+          Live voice, a conversation across the table, text you paste, a file you drop, or text your
+          camera sees — translated instantly. Install it and use it anywhere.
         </p>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "2rem" }}>
           {LANGUAGES.map((lang) => (
