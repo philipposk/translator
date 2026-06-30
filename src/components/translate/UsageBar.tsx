@@ -46,8 +46,8 @@ export function UsageBar() {
           <div style={{ width: `${pct}%`, height: "100%", background: danger ? "#f87171" : "var(--accent)", transition: "width 0.3s" }} />
         </div>
       </div>
-      <span style={{ fontSize: "0.75rem", color: danger ? "#f87171" : "var(--fg-muted)", fontVariantNumeric: "tabular-nums" }}>
-        {fmtMins(u.usedSeconds)} / {fmtMins(u.capSeconds)} transcribed this month
+      <span style={{ fontSize: "0.75rem", color: danger ? "#f87171" : "var(--fg-muted)", fontVariantNumeric: "tabular-nums" }} title="Voice & file translation use speech-to-text, which is metered. Typed text and camera translation are unlimited.">
+        {fmtMins(u.usedSeconds)} / {fmtMins(u.capSeconds)} voice &amp; file translation this month
       </span>
       {u.overLimit && <span style={{ fontSize: "0.72rem", color: "#f87171" }}>Limit reached</span>}
     </div>

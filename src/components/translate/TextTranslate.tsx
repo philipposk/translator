@@ -13,6 +13,7 @@ export function TextTranslate() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reqId = useRef(0);
 
@@ -81,6 +82,17 @@ export function TextTranslate() {
     }
   }
 
+  async function save() {
+    if (!input.trim() || !output.trim()) return;
+    setSaved(true);
+    await fetch("/api/jobs/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "text", source_lang: source, target_lang: target, source_text: input, target_text: output }),
+    }).catch(() => {});
+    setTimeout(() => setSaved(false), 1800);
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
@@ -138,8 +150,15 @@ export function TextTranslate() {
         </div>
       </div>
 
-      <div style={{ minHeight: "1.1rem", fontSize: "0.8rem", color: error ? "#f87171" : "var(--fg-muted)" }}>
-        {error ? error : busy ? "Translating…" : `${input.length} chars`}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: "1.1rem" }}>
+        <span style={{ fontSize: "0.8rem", color: error ? "#f87171" : "var(--fg-muted)" }}>
+          {error ? error : busy ? "Translating…" : `${input.length} chars`}
+        </span>
+        {output && !busy && (
+          <button onClick={save} className="btn btn-ghost" style={{ padding: "0.3rem 0.8rem", fontSize: "0.78rem" }}>
+            {saved ? "Saved ✓" : "Save to history"}
+          </button>
+        )}
       </div>
     </div>
   );

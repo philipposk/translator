@@ -112,6 +112,21 @@ export function LiveTranslate() {
     setError(null);
     runRef.current++; // invalidate any in-flight translations from a prior run
     if (listening) {
+      // save the session to history (best-effort)
+      if (turns.length) {
+        fetch("/api/jobs/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kind: "live",
+            source_lang: sourceLang,
+            target_lang: targetLang,
+            source_text: turns.map((t) => t.original).join("\n"),
+            target_text: turns.map((t) => t.translation).filter(Boolean).join("\n"),
+            segments: turns,
+          }),
+        }).catch(() => {});
+      }
       live.stop();
     } else {
       setTurns([]);

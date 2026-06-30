@@ -85,3 +85,53 @@ body {
 
 @keyframes tr-pulse { 0%,100% { opacity: 0.35; } 50% { opacity: 1; } }
 .tr-pulse { animation: tr-pulse 1.2s ease-in-out infinite; }
+
+/* ---------- App shell: sidebar + main ---------- */
+.tr-shell { display: flex; min-height: 100vh; }
+
+.tr-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+  padding: 1.1rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+.tr-brand {
+  display: flex; align-items: center; gap: 0.55rem;
+  font-weight: 700; font-size: 1.05rem; color: var(--fg);
+  text-decoration: none; padding: 0.2rem 0.5rem 0.9rem;
+}
+.tr-nav { display: flex; flex-direction: column; gap: 0.2rem; }
+.tr-nav-item {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.55rem 0.7rem; border-radius: 0.6rem;
+  color: var(--fg-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500;
+}
+.tr-nav-item:hover { background: rgba(255,255,255,0.05); color: var(--fg); }
+.tr-nav-item.on { background: rgba(52,211,153,0.14); color: var(--accent); font-weight: 600; }
+.tr-sidefoot { margin-top: auto; display: flex; flex-direction: column; gap: 0.5rem; padding-top: 1rem; }
+.tr-email { font-size: 0.72rem; color: var(--fg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tr-main { flex: 1; min-width: 0; }
+
+@media (max-width: 768px) {
+  .tr-shell { flex-direction: column; }
+  .tr-sidebar {
+    width: 100%; height: auto; position: sticky; top: 0; z-index: 20;
+    flex-direction: row; align-items: center; gap: 0.5rem;
+    padding: 0.6rem 0.8rem; border-right: 0; border-bottom: 1px solid var(--border);
+    background: rgba(7,7,10,0.85); backdrop-filter: blur(10px);
+  }
+  .tr-brand { padding: 0; }
+  .tr-brand span { display: none; }
+  .tr-nav { flex-direction: row; flex: 1; justify-content: center; gap: 0.1rem; }
+  .tr-nav-item span:last-child { display: none; }
+  .tr-nav-item { padding: 0.5rem 0.7rem; font-size: 1.1rem; }
+  .tr-sidefoot { margin-top: 0; flex-direction: row; align-items: center; padding-top: 0; }
+  .tr-email { display: none; }
+}

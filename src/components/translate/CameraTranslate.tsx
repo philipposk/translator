@@ -91,6 +91,14 @@ export function CameraTranslate() {
         const tr = await res.json();
         if (!res.ok) throw new Error(tr.error || "Translation failed");
         setTranslation(tr.translation || "");
+        // save to history (best-effort)
+        if (tr.translation) {
+          fetch("/api/jobs/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ kind: "image", source_lang: source, target_lang: target, source_text: text, target_text: tr.translation }),
+          }).catch(() => {});
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Could not read the image.");
       } finally {

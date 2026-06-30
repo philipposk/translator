@@ -9,6 +9,14 @@ const FEATURES = [
 
 export default function Home() {
   return (
+    <>
+      <nav style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "1rem 1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ color: "var(--accent)", fontWeight: 700, fontSize: "1.1rem" }}>Translator</span>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <a href="https://6x7.gr" style={{ color: "var(--fg-muted)", fontSize: "0.8rem" }}>by 6x7.gr</a>
+          <a href="/app" className="btn btn-ghost" style={{ padding: "0.4rem 1rem" }}>Open app</a>
+        </div>
+      </nav>
     <div style={{ maxWidth: "56rem", margin: "0 auto", padding: "3rem 1.5rem 6rem" }}>
       <div style={{ marginBottom: "4rem" }}>
         <p style={{ color: "var(--accent)", fontWeight: 600, fontSize: "0.875rem", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: "1rem" }}>
@@ -47,5 +55,9 @@ export default function Home() {
         ))}
       </div>
     </div>
+      <footer style={{ borderTop: "1px solid rgba(255,255,255,0.06)", color: "var(--fg-muted)", fontSize: "0.75rem", textAlign: "center", padding: "1.5rem" }}>
+        Translator · part of <a href="https://6x7.gr" style={{ color: "var(--accent)" }}>6x7.gr</a>
+      </footer>
+    </>
   );
 }
