@@ -1,6 +1,5 @@
-import { Workspace } from "@/components/translate/Workspace";
+import { AppRedirect } from "@/components/AppRedirect";
 
-// Auth handled by the (app) layout.
 export default function AppPage() {
-  return <Workspace />;
+  return <AppRedirect />;
 }

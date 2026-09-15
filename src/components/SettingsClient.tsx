@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { SOURCE_LANGS, TARGET_LANGS } from "@/lib/langs";
 import { getSettings, setSettings, type SttEngine } from "@/lib/settings";
 import { createClient } from "@/lib/supabase/client";
+import { PageHeader } from "@/components/PageHeader";
+import { SiteFooter } from "@/components/SiteFooter";
 import { LangPicker } from "@/components/translate/LangPicker";
 import { UsageBar } from "@/components/translate/UsageBar";
 
@@ -27,6 +29,13 @@ export function SettingsClient({ email }: { email: string | null }) {
   const [target, setTarget] = useState("en");
   const [engine, setEngine] = useState<SttEngine>("auto");
   const [convAuto, setConvAuto] = useState(false);
+  const [engines, setEngines] = useState<{
+    translation: { primary: string; available: string[]; deeplConfigured: boolean; googleConfigured: boolean };
+    stt: { primary: string; groqConfigured: boolean };
+  } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     const s = getSettings();
@@ -34,6 +43,24 @@ export function SettingsClient({ email }: { email: string | null }) {
     setTarget(s.targetLang === "auto" ? "en" : s.targetLang);
     setEngine(s.sttEngine);
     setConvAuto(s.convAuto);
+    fetch("/api/usage")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => d?.engines && setEngines(d.engines))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const el = document.getElementById("pa-voice-settings");
+      if (!el) return;
+      const { mountVoiceSettingsPanel } = await import("@page-assistant/widget");
+      if (cancelled) return;
+      mountVoiceSettingsPanel(el, { title: "Translator assistant" });
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function signOut() {
@@ -41,13 +68,67 @@ export function SettingsClient({ email }: { email: string | null }) {
     window.location.href = "/login";
   }
 
-  return (
-    <div style={{ maxWidth: "40rem", margin: "0 auto", padding: "2rem 1.25rem 4rem", display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      <h1 style={{ fontSize: "1.5rem", fontWeight: 700 }}>Settings</h1>
+  async function deleteAccount() {
+    if (deleteConfirm.trim() !== "DELETE") {
+      setDeleteError('Type DELETE in the box to confirm.');
+      return;
+    }
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch("/api/account/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: "DELETE" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Deletion failed");
+      await createClient().auth.signOut();
+      window.location.href = "/";
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Deletion failed");
+      setDeleting(false);
+    }
+  }
 
+  return (
+    <div className="tr-workspace" style={{ maxWidth: "40rem" }}>
+      <PageHeader title="Settings" description="Defaults, usage limits, and account." />
+
+      <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
       <section className="glass" style={{ padding: "1rem 1.25rem" }}>
         <h2 style={sectionTitle}>Plan & usage</h2>
         <UsageBar />
+      </section>
+
+      <section className="glass" style={{ padding: "1rem 1.25rem" }}>
+        <h2 style={sectionTitle}>Translation engines</h2>
+        {engines ? (
+          <div style={{ fontSize: "0.85rem", color: "var(--fg-muted)", lineHeight: 1.55 }}>
+            <p style={{ margin: "0 0 0.5rem" }}>
+              Active: <strong style={{ color: "var(--fg)" }}>{engines.translation.primary}</strong>
+              {engines.translation.deeplConfigured ? (
+                <span style={{ color: "var(--accent)" }}> · DeepL enabled</span>
+              ) : (
+                <span>
+                  {" "}
+                  · DeepL not configured — add <code>DEEPL_API_KEY</code> in Vercel for best quality
+                </span>
+              )}
+            </p>
+            <p style={{ margin: 0 }}>Fallback chain: {engines.translation.available.join(" → ")}</p>
+          </div>
+        ) : (
+          <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--fg-muted)" }}>Loading…</p>
+        )}
+      </section>
+
+      <section id="assistant" className="glass" style={{ padding: "0.5rem 1.25rem 1rem" }}>
+        <h2 style={sectionTitle}>Page assistant</h2>
+        <p style={{ fontSize: "0.85rem", color: "var(--fg-muted)", lineHeight: 1.5, margin: "0 0 0.75rem" }}>
+          Voice and read-aloud for the floating assistant (gear icon in the widget).
+        </p>
+        <div id="pa-voice-settings" />
       </section>
 
       <section className="glass" style={{ padding: "0.5rem 1.25rem 1rem" }}>
@@ -82,15 +163,62 @@ export function SettingsClient({ email }: { email: string | null }) {
       <section className="glass" style={{ padding: "0.5rem 1.25rem 1rem" }}>
         <h2 style={sectionTitle}>Account</h2>
         <Row label="Signed in as"><span style={{ color: "var(--fg-muted)", fontSize: "0.85rem" }}>{email || "—"}</span></Row>
-        <Row label="History"><a href="/history" className="btn btn-ghost" style={{ padding: "0.35rem 0.9rem", fontSize: "0.8rem" }}>Manage</a></Row>
+        <Row label="History">
+          <a href="/history" className="btn btn-ghost" style={{ padding: "0.35rem 0.9rem", fontSize: "0.8rem" }}>
+            Manage
+          </a>
+        </Row>
+        <Row label="Help">
+          <a href="/help" className="btn btn-ghost" style={{ padding: "0.35rem 0.9rem", fontSize: "0.8rem" }}>
+            Documentation
+          </a>
+        </Row>
+        <Row label="Privacy">
+          <a href="/privacy" className="btn btn-ghost" style={{ padding: "0.35rem 0.9rem", fontSize: "0.8rem" }}>
+            Policy
+          </a>
+        </Row>
         <div style={{ paddingTop: "0.85rem" }}>
           <button onClick={signOut} className="btn btn-ghost" style={{ padding: "0.45rem 1.1rem" }}>Sign out</button>
         </div>
       </section>
 
-      <p style={{ textAlign: "center", fontSize: "0.72rem", color: "var(--fg-muted)" }}>
-        Translator · part of <a href="https://6x7.gr" style={{ color: "var(--accent)" }}>6x7.gr</a>
-      </p>
+      <section className="glass tr-danger" style={{ padding: "1rem 1.25rem" }}>
+        <h2 style={sectionTitle}>Danger zone</h2>
+        <p style={{ fontSize: "0.85rem", color: "var(--fg-muted)", lineHeight: 1.5, margin: "0 0 0.75rem" }}>
+          Permanently delete your account, all history, and usage data. This cannot be undone.
+        </p>
+        <input
+          type="text"
+          value={deleteConfirm}
+          onChange={(e) => setDeleteConfirm(e.target.value)}
+          placeholder='Type DELETE to confirm'
+          aria-label="Confirm account deletion"
+          style={{
+            width: "100%",
+            padding: "0.6rem 0.75rem",
+            borderRadius: "0.6rem",
+            border: "1px solid rgba(248,113,113,0.35)",
+            background: "rgba(248,113,113,0.06)",
+            color: "var(--fg)",
+            fontSize: "0.85rem",
+            marginBottom: "0.65rem",
+          }}
+        />
+        {deleteError && <p style={{ color: "#f87171", fontSize: "0.82rem", margin: "0 0 0.5rem" }}>{deleteError}</p>}
+        <button
+          type="button"
+          onClick={deleteAccount}
+          disabled={deleting || deleteConfirm.trim() !== "DELETE"}
+          className="btn btn-ghost"
+          style={{ padding: "0.45rem 1rem", color: "#f87171", borderColor: "rgba(248,113,113,0.35)" }}
+        >
+          {deleting ? "Deleting…" : "Delete my account"}
+        </button>
+      </section>
+      </div>
+
+      <SiteFooter compact />
     </div>
   );
 }

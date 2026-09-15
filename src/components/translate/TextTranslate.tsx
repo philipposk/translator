@@ -14,6 +14,7 @@ export function TextTranslate() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [meta, setMeta] = useState<{ engine?: string; detected?: string } | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reqId = useRef(0);
 
@@ -28,6 +29,7 @@ export function TextTranslate() {
     async (text: string, src: string, tgt: string) => {
       if (!text.trim()) {
         setOutput("");
+        setMeta(null);
         setBusy(false);
         return;
       }
@@ -44,6 +46,10 @@ export function TextTranslate() {
         if (id !== reqId.current) return; // a newer request superseded this one
         if (!res.ok) throw new Error(data.error || "Translation failed");
         setOutput(data.translation || "");
+        setMeta({
+          engine: data.engine,
+          detected: data.detected_source_lang,
+        });
       } catch (e) {
         if (id === reqId.current) setError(e instanceof Error ? e.message : "Translation failed");
       } finally {
@@ -152,7 +158,15 @@ export function TextTranslate() {
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: "1.1rem" }}>
         <span style={{ fontSize: "0.8rem", color: error ? "#f87171" : "var(--fg-muted)" }}>
-          {error ? error : busy ? "Translating…" : `${input.length} chars`}
+          {error
+            ? error
+            : busy
+              ? "Translating…"
+              : meta?.detected && source === "auto"
+                ? `${input.length} chars · detected ${meta.detected}${meta.engine ? ` · ${meta.engine}` : ""}`
+                : meta?.engine
+                  ? `${input.length} chars · ${meta.engine}`
+                  : `${input.length} chars`}
         </span>
         {output && !busy && (
           <button onClick={save} className="btn btn-ghost" style={{ padding: "0.3rem 0.8rem", fontSize: "0.78rem" }}>

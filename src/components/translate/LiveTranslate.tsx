@@ -8,31 +8,29 @@ import { LangPicker } from "./LangPicker";
 
 type Turn = {
   id: number;
-  speaker: "A" | "B"; // for conversation; captions always "A"
+  speaker: "A" | "B";
   original: string;
   translation: string;
+  detectedLang?: string | null;
 };
 
 let _tid = 0;
 
 async function translateLine(text: string, source: string, target: string): Promise<string> {
-  try {
-    const res = await fetch("/api/translate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, source_lang: source, target_lang: target, mode: "caption" }),
-    });
-    const data = await res.json();
-    return res.ok ? data.translation || "" : "";
-  } catch {
-    return "";
-  }
+  const res = await fetch("/api/translate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, source_lang: source, target_lang: target, mode: "caption" }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Translation failed");
+  return data.translation || "";
 }
 
 export function LiveTranslate() {
   const [mode, setMode] = useState<LiveMode>("captions");
   const [flip, setFlip] = useState(false);
-  const [sourceLang, setSourceLang] = useState("en");
+  const [sourceLang, setSourceLang] = useState("auto");
   const [targetLang, setTargetLang] = useState("es");
   const [active, setActive] = useState<"A" | "B">("A"); // conversation: who's speaking
   const [convAuto, setConvAuto] = useState(false); // auto-detect spoken language
@@ -52,7 +50,7 @@ export function LiveTranslate() {
     setMode(s.liveMode);
     setFlip(s.flipSide);
     setConvAuto(s.convAuto);
-    setSourceLang(s.sourceLang === "auto" ? "en" : s.sourceLang);
+    setSourceLang(s.sourceLang);
     setTargetLang(s.targetLang === "auto" ? "es" : s.targetLang);
   }, []);
 
@@ -61,12 +59,22 @@ export function LiveTranslate() {
       if (!text) return;
       const run = runRef.current;
       if (mode === "captions") {
+        const from =
+          sourceLang === "auto" ? detectedToCode(detLang) || "en" : sourceLang;
         const id = ++_tid;
-        setTurns((t) => [...t, { id, speaker: "A", original: text, translation: "" }]);
-        translateLine(text, sourceLang, targetLang).then((tr) => {
-          if (runRef.current !== run) return; // session stopped/reset — drop
-          setTurns((t) => t.map((x) => (x.id === id ? { ...x, translation: tr } : x)));
-        });
+        setTurns((t) => [
+          ...t,
+          { id, speaker: "A", original: text, translation: "", detectedLang: from },
+        ]);
+        translateLine(text, from, targetLang)
+          .then((tr) => {
+            if (runRef.current !== run) return;
+            setTurns((t) => t.map((x) => (x.id === id ? { ...x, translation: tr } : x)));
+          })
+          .catch((e) => {
+            if (runRef.current !== run) return;
+            setError(e instanceof Error ? e.message : "Translation failed");
+          });
         return;
       }
       // conversation: pick the speaking side + direction.
@@ -87,11 +95,19 @@ export function LiveTranslate() {
         to = spk === "A" ? langB : langA;
       }
       const id = ++_tid;
-      setTurns((t) => [...t, { id, speaker: spk, original: text, translation: "" }]);
-      translateLine(text, from, to).then((tr) => {
-        if (runRef.current !== run) return;
-        setTurns((t) => t.map((x) => (x.id === id ? { ...x, translation: tr } : x)));
-      });
+      setTurns((t) => [
+        ...t,
+        { id, speaker: spk, original: text, translation: "", detectedLang: from },
+      ]);
+      translateLine(text, from, to)
+        .then((tr) => {
+          if (runRef.current !== run) return;
+          setTurns((t) => t.map((x) => (x.id === id ? { ...x, translation: tr } : x)));
+        })
+        .catch((e) => {
+          if (runRef.current !== run) return;
+          setError(e instanceof Error ? e.message : "Translation failed");
+        });
     },
     [mode, sourceLang, targetLang, active, langA, langB, convAuto],
   );
@@ -130,11 +146,19 @@ export function LiveTranslate() {
       live.stop();
     } else {
       setTurns([]);
-      if (mode === "conversation" && convAuto) {
-        // auto-detect: force Whisper + VAD; language is chosen per utterance.
-        live.start(langA, "groq", { detect: true });
+      const useDetect =
+        (mode === "conversation" && convAuto) || (mode === "captions" && sourceLang === "auto");
+      if (useDetect) {
+        live.start(langA === "auto" ? "en" : langA, "groq", { detect: true });
       } else {
-        const lang = mode === "captions" ? sourceLang : active === "A" ? langA : langB;
+        const lang =
+          mode === "captions"
+            ? sourceLang === "auto"
+              ? "en"
+              : sourceLang
+            : active === "A"
+              ? langA
+              : langB;
         live.start(lang, getSettings().sttEngine);
       }
     }
@@ -161,7 +185,11 @@ export function LiveTranslate() {
           </button>
           <button
             className="btn"
-            onClick={() => { setMode("conversation"); setSettings({ liveMode: "conversation" }); }}
+            onClick={() => {
+              setMode("conversation");
+              setSettings({ liveMode: "conversation" });
+              if (sourceLang === "auto") setSourceLang("en");
+            }}
             style={pill(mode === "conversation")}
           >
             Conversation
@@ -172,8 +200,13 @@ export function LiveTranslate() {
           <LangPicker
             value={sourceLang}
             onChange={(c) => { setSourceLang(c); setSettings({ sourceLang: c }); }}
-            options={SOURCE_LANGS.filter((l) => l.code !== "auto")}
+            options={
+              mode === "conversation"
+                ? SOURCE_LANGS.filter((l) => l.code !== "auto")
+                : SOURCE_LANGS
+            }
             ariaLabel={mode === "conversation" ? "Side A language" : "Spoken language"}
+            disabled={listening}
           />
           <span style={{ color: "var(--fg-muted)" }}>→</span>
           <LangPicker
@@ -181,6 +214,7 @@ export function LiveTranslate() {
             onChange={(c) => { setTargetLang(c); setSettings({ targetLang: c }); }}
             options={TARGET_LANGS}
             ariaLabel={mode === "conversation" ? "Side B language" : "Translate to"}
+            disabled={listening}
           />
           {mode === "conversation" && (
             <button
