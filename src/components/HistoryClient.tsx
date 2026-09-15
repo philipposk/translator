@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { labelOf } from "@/lib/langs";
+import type { ExportSegment } from "@/lib/export";
+import { PageHeader } from "@/components/PageHeader";
+import { ExportMenu } from "@/components/ExportMenu";
+import { IconLive, IconText, IconFile, IconCamera } from "@/components/icons";
 
 type Job = {
   id: string;
@@ -16,7 +20,14 @@ type Job = {
   created_at: string;
 };
 
-const KIND_ICON: Record<string, string> = { live: "🎙️", text: "⌨️", file: "📄", image: "📷" };
+type JobDetail = Job & { segments?: ExportSegment[] };
+
+const KIND_ICON: Record<string, React.ReactNode> = {
+  live: <IconLive size={16} />,
+  text: <IconText size={16} />,
+  file: <IconFile size={16} />,
+  image: <IconCamera size={16} />,
+};
 
 function when(iso: string) {
   const d = new Date(iso);
@@ -26,6 +37,7 @@ function when(iso: string) {
 export function HistoryClient() {
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [open, setOpen] = useState<string | null>(null);
+  const [detail, setDetail] = useState<Record<string, JobDetail>>({});
   const [busy, setBusy] = useState(false);
 
   async function load() {
@@ -37,8 +49,22 @@ export function HistoryClient() {
     load();
   }, []);
 
+  async function toggle(id: string) {
+    if (open === id) {
+      setOpen(null);
+      return;
+    }
+    setOpen(id);
+    if (!detail[id]) {
+      const res = await fetch(`/api/jobs/${id}`);
+      const data = await res.json();
+      if (res.ok && data.job) setDetail((d) => ({ ...d, [id]: data.job }));
+    }
+  }
+
   async function del(id: string) {
     setJobs((j) => j?.filter((x) => x.id !== id) ?? null);
+    if (open === id) setOpen(null);
     await fetch(`/api/jobs/${id}`, { method: "DELETE" }).catch(() => {});
   }
 
@@ -47,15 +73,16 @@ export function HistoryClient() {
     setBusy(true);
     await fetch("/api/jobs", { method: "DELETE" }).catch(() => {});
     setJobs([]);
+    setOpen(null);
     setBusy(false);
   }
 
   return (
-    <div style={{ maxWidth: "48rem", margin: "0 auto", padding: "2rem 1.25rem 4rem" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
-        <h1 style={{ fontSize: "1.5rem", fontWeight: 700 }}>History</h1>
+    <div className="tr-workspace" style={{ maxWidth: "48rem" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", marginBottom: "0.5rem" }}>
+        <PageHeader title="History" description="Your saved translations. Expand a row to see full text or export." />
         {!!jobs?.length && (
-          <button onClick={clearAll} disabled={busy} className="btn btn-ghost" style={{ padding: "0.4rem 0.9rem", fontSize: "0.8rem", color: "#f87171" }}>
+          <button onClick={clearAll} disabled={busy} className="btn btn-ghost" style={{ padding: "0.4rem 0.9rem", fontSize: "0.8rem", color: "#f87171", flexShrink: 0 }}>
             Clear all
           </button>
         )}
@@ -65,7 +92,7 @@ export function HistoryClient() {
       {jobs?.length === 0 && (
         <div className="glass" style={{ padding: "2.5rem 1.5rem", textAlign: "center", color: "var(--fg-muted)" }}>
           <p style={{ margin: "0 0 0.75rem" }}>No translations yet.</p>
-          <a href="/app" className="btn btn-primary">Start translating</a>
+          <a href="/app/text" className="btn btn-primary">Start translating</a>
         </div>
       )}
 
@@ -73,10 +100,12 @@ export function HistoryClient() {
         {jobs?.map((j) => {
           const isOpen = open === j.id;
           const snippet = (j.target_text || j.source_text || "").slice(0, 120);
+          const full = detail[j.id] || j;
+          const segments = Array.isArray(full.segments) ? full.segments : null;
           return (
             <div key={j.id} className="glass" style={{ padding: "0.85rem 1rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", cursor: "pointer" }} onClick={() => setOpen(isOpen ? null : j.id)}>
-                <span aria-hidden style={{ fontSize: "1.1rem" }}>{KIND_ICON[j.kind || "text"] || "🌐"}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", cursor: "pointer" }} onClick={() => toggle(j.id)}>
+                <span aria-hidden style={{ display: "flex", color: "var(--fg-muted)" }}>{KIND_ICON[j.kind || "text"] || <IconText size={16} />}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: "0.8rem", color: "var(--fg-muted)" }}>
                     {labelOf(j.source_lang || "auto")} → {labelOf(j.target_lang || "")} · {when(j.created_at)}
@@ -96,10 +125,20 @@ export function HistoryClient() {
                 </button>
               </div>
               {isOpen && (
-                <div className="tr-two-pane" style={{ marginTop: "0.75rem" }}>
-                  <div style={{ fontSize: "0.9rem", color: "var(--fg-muted)", whiteSpace: "pre-wrap" }}>{j.source_text || "—"}</div>
-                  <div style={{ fontSize: "0.95rem", whiteSpace: "pre-wrap" }}>{j.target_text || "—"}</div>
-                </div>
+                <>
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.65rem" }}>
+                    <ExportMenu
+                      segments={segments}
+                      sourceText={full.source_text || ""}
+                      targetText={full.target_text || ""}
+                      baseName={j.source_name?.replace(/\.[^.]+$/, "") || "translation"}
+                    />
+                  </div>
+                  <div className="tr-two-pane" style={{ marginTop: "0.75rem" }}>
+                    <div style={{ fontSize: "0.9rem", color: "var(--fg-muted)", whiteSpace: "pre-wrap" }}>{full.source_text || "—"}</div>
+                    <div style={{ fontSize: "0.95rem", whiteSpace: "pre-wrap" }}>{full.target_text || "—"}</div>
+                  </div>
+                </>
               )}
             </div>
           );

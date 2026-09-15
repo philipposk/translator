@@ -34,16 +34,60 @@ export const LANGUAGES: Lang[] = [
 
 const byCode = new Map(LANGUAGES.map((l) => [l.code, l]));
 const byLabel = new Map(LANGUAGES.map((l) => [l.label.toLowerCase(), l.code]));
+const byOcr = new Map(LANGUAGES.filter((l) => l.ocrCode).map((l) => [l.ocrCode!, l.code]));
 
-// Whisper reports the detected language as an ISO code ("en") or an English name
-// ("english"). Normalize to our internal code, or null if unrecognized.
+// ISO 639-3 aliases Whisper / franc may emit
+const ISO3_ALIASES: Record<string, string> = {
+  eng: "en",
+  ell: "el",
+  gre: "el",
+  spa: "es",
+  fra: "fr",
+  fre: "fr",
+  deu: "de",
+  ger: "de",
+  ita: "it",
+  por: "pt",
+  nld: "nl",
+  dut: "nl",
+  dan: "da",
+  swe: "sv",
+  rus: "ru",
+  tur: "tr",
+  ara: "ar",
+  hin: "hi",
+  jpn: "ja",
+  kor: "ko",
+  cmn: "zh",
+  zho: "zh",
+  chi_sim: "zh",
+};
+
+// Whisper reports ISO 639-1 ("en"), ISO 639-3 ("ell"), or English name ("english").
+// Normalize to our internal code, or null if unrecognized.
 export function detectedToCode(detected: string | undefined | null): string | null {
   if (!detected) return null;
   const s = detected.trim().toLowerCase();
   if (byCode.has(s)) return s;
   if (byLabel.has(s)) return byLabel.get(s)!;
+  if (byOcr.has(s)) return byOcr.get(s)!;
+  if (ISO3_ALIASES[s]) return ISO3_ALIASES[s];
   if (s === "mandarin" || s.startsWith("chinese")) return "zh";
+  // DeepL-style uppercase ISO 639-1
+  const lower = s.toLowerCase();
+  if (byCode.has(lower)) return lower;
   return null;
+}
+
+/** Best source code for STT/translation: Whisper detect wins over user picker. */
+export function effectiveSourceCode(
+  whisperLang: string | undefined | null,
+  userSource: string | undefined,
+): string {
+  const detected = detectedToCode(whisperLang);
+  if (detected) return detected;
+  if (userSource && userSource !== "auto") return userSource;
+  return "en";
 }
 
 // Validation — reject anything not in our registry (prevents injection into the
@@ -73,3 +117,5 @@ export const SOURCE_LANGS = LANGUAGES;
 export const TARGET_LANGS = LANGUAGES.filter((l) => l.code !== "auto");
 // Languages Tesseract can OCR (excludes "auto" / null ocrCode).
 export const OCR_LANGS = LANGUAGES.filter((l) => l.ocrCode);
+// Camera source picker: detect + OCR-supported langs.
+export const OCR_SOURCE_LANGS = [LANGUAGES[0], ...OCR_LANGS];

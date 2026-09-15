@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { OCR_LANGS, TARGET_LANGS, ocrCodeOf, labelOf } from "@/lib/langs";
+import { OCR_SOURCE_LANGS, TARGET_LANGS, ocrCodeOf, labelOf } from "@/lib/langs";
+import { looksLikeGibberish, preprocessForOcr } from "@/lib/ocr";
 import { getSettings, setSettings } from "@/lib/settings";
 import { LangPicker } from "./LangPicker";
 
@@ -13,7 +14,8 @@ export function CameraTranslate() {
   const streamRef = useRef<MediaStream | null>(null);
   const [camOn, setCamOn] = useState(false);
   const [camError, setCamError] = useState<string | null>(null);
-  const [source, setSource] = useState("en");
+  const [source, setSource] = useState("auto");
+  const [resolvedSource, setResolvedSource] = useState("en");
   const [target, setTarget] = useState("en");
   const [stage, setStage] = useState<Stage>("idle");
   const [ocrText, setOcrText] = useState("");
@@ -22,7 +24,7 @@ export function CameraTranslate() {
 
   useEffect(() => {
     const s = getSettings();
-    setSource(s.sourceLang === "auto" ? "en" : s.sourceLang);
+    setSource(s.sourceLang === "auto" || OCR_SOURCE_LANGS.some((l) => l.code === s.sourceLang) ? s.sourceLang : "auto");
     setTarget(s.targetLang === "auto" ? "en" : s.targetLang);
     return () => stopCam();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -52,6 +54,16 @@ export function CameraTranslate() {
     setCamOn(false);
   }
 
+  async function detectFromText(text: string): Promise<string | null> {
+    const res = await fetch("/api/detect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    const data = await res.json();
+    return res.ok && data.code ? String(data.code) : null;
+  }
+
   const runOcr = useCallback(
     async (image: CanvasImageSource | Blob, w?: number, h?: number) => {
       setError(null);
@@ -62,41 +74,73 @@ export function CameraTranslate() {
         const Tesseract: typeof import("tesseract.js") = await import("tesseract.js");
         const recognize = (Tesseract as unknown as { recognize: typeof import("tesseract.js").recognize }).recognize;
 
-        let src: Blob | HTMLCanvasElement;
+        let canvas: HTMLCanvasElement;
         if (image instanceof Blob) {
-          src = image;
+          const bmp = await createImageBitmap(image);
+          canvas = preprocessForOcr(bmp, bmp.width, bmp.height);
+          bmp.close();
         } else {
-          const canvas = document.createElement("canvas");
-          canvas.width = w || 1280;
-          canvas.height = h || 720;
-          canvas.getContext("2d")!.drawImage(image, 0, 0, canvas.width, canvas.height);
-          src = canvas;
+          const width = w || 1280;
+          const height = h || 720;
+          canvas = preprocessForOcr(image, width, height);
         }
 
-        const { data } = await recognize(src, ocrCodeOf(source));
-        const text = (data.text || "").trim().slice(0, 4000); // cap before translating
+        const ocrLang = source === "auto" ? "eng" : ocrCodeOf(source);
+        let { data } = await recognize(canvas, ocrLang);
+        let text = (data.text || "").trim().slice(0, 4000);
+
+        let effectiveSource = source === "auto" ? "en" : source;
+        if (source === "auto" && text) {
+          const detected = await detectFromText(text);
+          if (detected) {
+            effectiveSource = detected;
+            if (looksLikeGibberish(text)) {
+              const retry = await recognize(canvas, ocrCodeOf(detected));
+              const retryText = (retry.data.text || "").trim().slice(0, 4000);
+              if (retryText && !looksLikeGibberish(retryText)) {
+                text = retryText;
+                data = retry.data;
+              }
+            }
+          }
+        }
+
+        setResolvedSource(effectiveSource);
         setOcrText(text);
         if (!text) {
-          setError("No readable text found. Try getting closer or steadier.");
+          setError("No readable text found. Try getting closer, steadier, or pick the text language.");
           setStage("idle");
           return;
+        }
+        if (looksLikeGibberish(text)) {
+          setError("Text hard to read — try better lighting or select the text language manually.");
         }
 
         setStage("translating");
         const res = await fetch("/api/translate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text, source_lang: source, target_lang: target, mode: "document" }),
+          body: JSON.stringify({
+            text,
+            source_lang: effectiveSource,
+            target_lang: target,
+            mode: "document",
+          }),
         });
         const tr = await res.json();
         if (!res.ok) throw new Error(tr.error || "Translation failed");
         setTranslation(tr.translation || "");
-        // save to history (best-effort)
         if (tr.translation) {
           fetch("/api/jobs/save", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ kind: "image", source_lang: source, target_lang: target, source_text: text, target_text: tr.translation }),
+            body: JSON.stringify({
+              kind: "image",
+              source_lang: effectiveSource,
+              target_lang: target,
+              source_text: text,
+              target_text: tr.translation,
+            }),
           }).catch(() => {});
         }
       } catch (e) {
@@ -114,13 +158,25 @@ export function CameraTranslate() {
     runOcr(v, v.videoWidth || 1280, v.videoHeight || 720);
   }
 
+  const sourceLabel = source === "auto" ? `Detected (${labelOf(resolvedSource)})` : labelOf(source);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", justifyContent: "center" }}>
         <span style={{ fontSize: "0.8rem", color: "var(--fg-muted)" }}>Text is</span>
-        <LangPicker value={source} onChange={(c) => { setSource(c); setSettings({ sourceLang: c }); }} options={OCR_LANGS} ariaLabel="Text language" />
+        <LangPicker
+          value={source}
+          onChange={(c) => { setSource(c); setSettings({ sourceLang: c }); }}
+          options={OCR_SOURCE_LANGS}
+          ariaLabel="Text language"
+        />
         <span style={{ fontSize: "0.8rem", color: "var(--fg-muted)" }}>→</span>
-        <LangPicker value={target} onChange={(c) => { setTarget(c); setSettings({ targetLang: c }); }} options={TARGET_LANGS} ariaLabel="Translate to" />
+        <LangPicker
+          value={target}
+          onChange={(c) => { setTarget(c); setSettings({ targetLang: c }); }}
+          options={TARGET_LANGS}
+          ariaLabel="Translate to"
+        />
       </div>
 
       <div className="glass" style={{ overflow: "hidden", position: "relative", aspectRatio: "4 / 3", display: "flex", alignItems: "center", justifyContent: "center", background: "#000" }}>
@@ -129,7 +185,7 @@ export function CameraTranslate() {
           <div style={{ textAlign: "center", color: "var(--fg-muted)", padding: "1.5rem" }}>
             <p style={{ margin: "0 0 0.75rem" }}>Point your camera at text, or upload a photo.</p>
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap" }}>
-              <button className="btn btn-primary" onClick={startCam}>📷 Open camera</button>
+              <button className="btn btn-primary" onClick={startCam}>Open camera</button>
               <button className="btn btn-ghost" onClick={() => fileRef.current?.click()}>Upload photo</button>
             </div>
             {camError && <p style={{ color: "#f87171", fontSize: "0.8rem", marginTop: "0.75rem" }}>{camError}</p>}
@@ -145,7 +201,7 @@ export function CameraTranslate() {
       {camOn && (
         <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap" }}>
           <button className="btn btn-primary" onClick={capture} disabled={stage !== "idle"} style={{ padding: "0.7rem 2rem" }}>
-            ◉ Capture & translate
+            Capture & translate
           </button>
           <button className="btn btn-ghost" onClick={() => fileRef.current?.click()}>Upload instead</button>
           <button className="btn btn-ghost" onClick={stopCam}>Close camera</button>
@@ -157,7 +213,7 @@ export function CameraTranslate() {
       {(ocrText || translation) && (
         <div className="tr-two-pane">
           <div className="glass" style={{ padding: "1rem 1.1rem" }}>
-            <p style={titleStyle}>Detected ({labelOf(source)})</p>
+            <p style={titleStyle}>{sourceLabel}</p>
             <p style={{ margin: 0, whiteSpace: "pre-wrap", color: "var(--fg-muted)" }}>{ocrText || "—"}</p>
           </div>
           <div className="glass" style={{ padding: "1rem 1.1rem" }}>

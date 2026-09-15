@@ -2,22 +2,32 @@
 
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { WORKSPACE_MODES } from "@/lib/modes";
 import { InstallButton } from "@/components/InstallButton";
+import { OnboardingTour } from "@/components/OnboardingTour";
+import {
+  LogoMark,
+  IconLive,
+  IconText,
+  IconFile,
+  IconCamera,
+  IconHistory,
+  IconSettings,
+  IconHelp,
+} from "@/components/icons";
+import { SiteFooter } from "@/components/SiteFooter";
 
-const Logo = (
-  <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true" style={{ flexShrink: 0 }}>
-    <rect width="32" height="32" rx="8" fill="var(--accent)" />
-    <g fill="#000">
-      <rect x="7" y="8" width="18" height="4" rx="1.5" />
-      <rect x="14" y="8" width="4" height="17" rx="1.5" />
-    </g>
-  </svg>
-);
+const MODE_ICONS = {
+  live: IconLive,
+  text: IconText,
+  file: IconFile,
+  camera: IconCamera,
+} as const;
 
-const NAV = [
-  { href: "/app", label: "Translate", icon: "🌐" },
-  { href: "/history", label: "History", icon: "🕘" },
-  { href: "/settings", label: "Settings", icon: "⚙️" },
+const SECONDARY = [
+  { href: "/history", label: "History", Icon: IconHistory },
+  { href: "/settings", label: "Settings", Icon: IconSettings },
+  { href: "/help", label: "Help", Icon: IconHelp },
 ];
 
 export function Sidebar({ email }: { email?: string | null }) {
@@ -31,21 +41,58 @@ export function Sidebar({ email }: { email?: string | null }) {
 
   return (
     <aside className="tr-sidebar">
-      <a href="/app" className="tr-brand">{Logo}<span>Translator</span></a>
-      <nav className="tr-nav">
-        {NAV.map((n) => (
-          <a key={n.href} href={n.href} className={`tr-nav-item ${active(n.href) ? "on" : ""}`}>
-            <span aria-hidden>{n.icon}</span>
-            <span>{n.label}</span>
-          </a>
-        ))}
-      </nav>
+      <OnboardingTour />
+      <a href="/app" className="tr-brand">
+        <LogoMark />
+        <div className="tr-brand-text">
+          <span>Translator</span>
+          <small>by 6x7.gr</small>
+        </div>
+      </a>
+
+      <div className="tr-nav-section">
+        <span className="tr-nav-label">Workspace</span>
+        <nav className="tr-nav" aria-label="Translation modes">
+          {WORKSPACE_MODES.map((m) => {
+            const Icon = MODE_ICONS[m.id];
+            return (
+              <a key={m.href} href={m.href} className={`tr-nav-item ${active(m.href) ? "on" : ""}`}>
+                <Icon />
+                <span className="tr-nav-copy">
+                  <span className="tr-nav-title">{m.label}</span>
+                  <span className="tr-nav-hint">{m.description}</span>
+                </span>
+              </a>
+            );
+          })}
+        </nav>
+      </div>
+
+      <div className="tr-nav-section">
+        <span className="tr-nav-label">Library</span>
+        <nav className="tr-nav" aria-label="Library">
+          {SECONDARY.map((n) => (
+            <a key={n.href} href={n.href} className={`tr-nav-item compact ${active(n.href) ? "on" : ""}`}>
+              <n.Icon />
+              <span className="tr-nav-title">{n.label}</span>
+            </a>
+          ))}
+        </nav>
+      </div>
+
       <div className="tr-sidefoot">
         <InstallButton />
-        {email && <span className="tr-email" title={email}>{email}</span>}
-        <button onClick={signOut} className="btn btn-ghost" style={{ padding: "0.4rem 0.9rem", fontSize: "0.8rem" }}>
-          Sign out
-        </button>
+        {email && (
+          <div className="tr-user">
+            <span className="tr-email" title={email}>
+              {email}
+            </span>
+            <button type="button" onClick={signOut} className="btn btn-ghost tr-signout">
+              Sign out
+            </button>
+          </div>
+        )}
+        <SiteFooter compact />
       </div>
     </aside>
   );

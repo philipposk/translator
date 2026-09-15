@@ -2,7 +2,7 @@
   "name": "Translator",
   "short_name": "Translate",
   "description": "Live voice, text, file and camera translation. Speak, type, upload or point your camera — get instant translation.",
-  "start_url": "/app",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",

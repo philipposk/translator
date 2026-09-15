@@ -7,16 +7,19 @@ export function LangPicker({
   onChange,
   options,
   ariaLabel,
+  disabled,
 }: {
   value: string;
   onChange: (code: string) => void;
   options: Lang[];
   ariaLabel?: string;
+  disabled?: boolean;
 }) {
   return (
     <select
       aria-label={ariaLabel}
       value={value}
+      disabled={disabled}
       onChange={(e) => onChange(e.target.value)}
       style={{
         appearance: "none",
@@ -28,7 +31,8 @@ export function LangPicker({
         color: "var(--fg)",
         fontSize: "0.85rem",
         fontWeight: 600,
-        cursor: "pointer",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.55 : 1,
       }}
     >
       {options.map((l) => (
