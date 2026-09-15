@@ -7,7 +7,7 @@ export function PrivacyContent() {
         if you operate in the EU or process sensitive content.
       </p>
 
-      <p className="tr-doc-meta">Last updated: June 2026 · Operator: 6x7.gr</p>
+      <p className="tr-doc-meta">Last updated: September 2026 · Operator: 6x7.gr</p>
 
       <section>
         <h2>Who we are</h2>
@@ -76,10 +76,23 @@ export function PrivacyContent() {
       </section>
 
       <section>
+        <h2>Assistant chats</h2>
+        <p>
+          By default, your conversations with the in-app assistant are saved to your account so they are
+          there on any device you sign in on. We store the chat text, its title and the model used in our
+          database (Supabase), and only your account can read them. A saved chat is deleted automatically
+          once it has had no activity for 12 months. In the assistant&apos;s settings (Data tab) you can
+          instead keep chats only in this browser (localStorage), or not save them at all, and you can
+          delete one chat or all of them at any time. Deleting your account deletes them too.
+        </p>
+      </section>
+
+      <section>
         <h2>Retention</h2>
         <ul>
           <li>History entries remain until you delete them or clear all history.</li>
           <li>Uploaded media is removed after successful processing.</li>
+          <li>Saved assistant chats are deleted after 12 months without activity.</li>
           <li>Account data is kept while your account is active.</li>
         </ul>
       </section>
