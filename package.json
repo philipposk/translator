@@ -7,14 +7,20 @@
   },
   "scripts": {
     "dev": "NODE_OPTIONS='--disable-warning=DEP0205' next dev",
-    "build": "next build --webpack",
+    "build:assistant": "pnpm --filter @page-assistant/core build && pnpm --filter @page-assistant/server build && pnpm --filter @page-assistant/widget build",
+    "build": "pnpm build:assistant && next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@page-assistant/core": "workspace:*",
+    "@page-assistant/server": "workspace:*",
+    "@page-assistant/widget": "workspace:*",
     "@serwist/next": "^9.5.11",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.2",
+    "franc": "^6.2.0",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -22,6 +28,7 @@
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
+    "esbuild": "^0.24.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -29,6 +36,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.9"
   }
 }

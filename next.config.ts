@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
 
 const nextConfig: NextConfig = {
+  transpilePackages: ["@page-assistant/widget", "@page-assistant/core"],
   // Pin the workspace root (several lockfiles exist above this dir).
   turbopack: { root: process.cwd() },
   experimental: {

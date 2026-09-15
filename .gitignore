@@ -13,3 +13,12 @@ public/swe-worker-*.js
 
 # build cache
 *.tsbuildinfo
+
+# page-assistant package builds (rebuilt via pnpm build:assistant)
+packages/*/dist
+
+# Claude Code MCP config (contains Supabase access token)
+.mcp.json
+
+# Supabase CLI local state
+supabase/.temp/
