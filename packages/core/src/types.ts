@@ -34,12 +34,37 @@ export interface Capability<A = any, R = any> {
    * for any factual claim. Omit for actions whose result needs no narration.
    */
   render?: (result: R, args: A) => string;
+  /**
+   * If true, render() IS the answer: the model's prose is discarded and the
+   * rendered text is shown as written.
+   *
+   * The factual validator checks that every number the model states appears
+   * somewhere in the trusted output. That catches an invented figure, but not
+   * a correctly-copied figure attached to the wrong label — asked to report
+   * withdrawals per partner, a model reproduced both real amounts and swapped
+   * whose was whose, and the validator passed it because both numbers were
+   * present. Set this wherever a figure only means something together with the
+   * name, date or category beside it: per-person splits, per-bank breakdowns,
+   * anything a reader would act on.
+   */
+  verbatim?: boolean;
   /** If true, the assistant must get explicit user confirmation before run() (writes, deletes). */
   confirm?: boolean;
   /** Optional tags for grouping in llm.txt / docs. */
   tags?: string[];
   /** If false, capability is hidden from the external agent endpoint (llm.txt). Default true. */
   exposeToAgents?: boolean;
+  /**
+   * Whether this capability is available right now. When false it is left out of
+   * everything the model and other agents are told — the tool list, forced routing,
+   * llm.txt and the actions manifest — and a stale call to it is refused, not run.
+   *
+   * For a feature flag, a plan tier, or a backend that is not configured: registering
+   * it anyway would let the assistant promise something that is unavailable. A function
+   * is re-read every turn, so flipping the flag needs no re-registration; one that
+   * throws counts as off. Default true.
+   */
+  enabled?: boolean | (() => boolean);
 }
 
 export interface CapabilityRunContext {
@@ -82,11 +107,30 @@ export interface MemoryStore {
   recall(query: string, limit?: number): Promise<MemoryFact[]> | MemoryFact[];
 }
 
+/** One tool call the model made, preserved so we can thread the result back natively. */
+export interface ToolCallRef {
+  /** provider-assigned id (Anthropic tool_use.id / OpenAI tool_call.id) */
+  id: string;
+  name: string;
+  args: Record<string, unknown>;
+}
+
 export interface ChatMessage {
   role: "user" | "assistant" | "system" | "tool";
   content: string;
-  /** present on assistant tool-call turns */
+  /** present on tool-result turns: which capability produced this content */
   toolName?: string;
+  /**
+   * present on tool-result turns: the id of the assistant tool_use/tool_call this
+   * result answers. Lets us thread results as native tool_result blocks instead of
+   * plain user text, so the model recognizes calls it actually made.
+   */
+  toolCallId?: string;
+  /**
+   * present on assistant turns that made tool calls: the model's own tool_use blocks,
+   * appended verbatim so the provider sees a coherent call→result pairing.
+   */
+  toolCalls?: ToolCallRef[];
 }
 
 export interface ChatRequest {
@@ -102,6 +146,8 @@ export interface ToolInvocation {
   ok: boolean;
   result?: unknown;
   rendered?: string;
+  /** The capability asked for its render() to be shown as written. */
+  verbatim?: boolean;
   error?: string;
 }
 
@@ -114,6 +160,8 @@ export interface ChatResponse {
   pendingConfirmation?: { name: string; args: Record<string, unknown>; preview: string };
   /** True if the grounding validator had to override invented model text. */
   corrected?: boolean;
+  /** Token usage summed across every LLM round this turn (for metering/budgets). */
+  usage?: LLMTokenUsage & { provider?: string };
 }
 
 /** Minimal interface an LLM provider must satisfy for the grounding loop. */
@@ -130,9 +178,21 @@ export interface LLMCompletionInput {
   /** force a specific tool (grounding: forced-factual selection) */
   forceTool?: string;
   temperature?: number;
+  /** Optional model override (passed from widget settings through server proxy). */
+  model?: string;
+}
+
+export interface LLMTokenUsage {
+  promptTokens?: number;
+  completionTokens?: number;
 }
 
 export interface LLMCompletionOutput {
-  toolCalls: Array<{ name: string; args: Record<string, unknown> }>;
+  /** Each tool call carries a provider id so grounding can thread the result back. */
+  toolCalls: Array<{ id?: string; name: string; args: Record<string, unknown> }>;
   text: string;
+  /** Token counts reported by the provider, when available. */
+  usage?: LLMTokenUsage;
+  /** Which provider actually served this completion (after any fallback). */
+  provider?: string;
 }
