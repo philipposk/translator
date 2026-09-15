@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { adminClient, JOBS_TABLE, UPLOAD_BUCKET } from "./supabase/admin";
+import { ASSISTANT_CHATS_TABLE } from "./assistant/meta";
 
 function authAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -20,6 +21,9 @@ export async function deleteUserAccount(userId: string): Promise<void> {
 
   await db.from(JOBS_TABLE).delete().eq("user_id", userId);
   await db.from("usage_monthly").delete().eq("user_id", userId);
+  // Saved assistant chats live in public, not the translator schema. The auth.users FK would cascade too,
+  // but delete explicitly so they go even if removing the login below fails.
+  await db.schema("public").from(ASSISTANT_CHATS_TABLE).delete().eq("user_id", userId);
 
   const { error } = await authAdmin().auth.admin.deleteUser(userId);
   if (error) throw new Error(error.message);

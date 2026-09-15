@@ -2,6 +2,11 @@ import type { LlmTxtMeta } from "@page-assistant/core";
 
 export const ASSISTANT_BASE = "/api/assistant";
 
+/** Account chat history: public.translator_assistant_chats (supabase/migrations/20260915_assistant_chats.sql). */
+export const ASSISTANT_CHATS_TABLE = "translator_assistant_chats";
+export const ASSISTANT_CHATS_APP = "translator";
+export const ASSISTANT_CHATS_RETENTION_MONTHS = 12;
+
 export function appOrigin(): string {
   const explicit = process.env.NEXT_PUBLIC_APP_URL;
   if (explicit) return explicit.replace(/\/$/, "");
