@@ -12,7 +12,7 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  if (!rateLimit(`save:${userId}`, 60, 60_000)) {
+  if (!(await rateLimit(`save:${userId}`, 60, 60_000))) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
