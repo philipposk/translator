@@ -37,6 +37,6 @@ export async function proxy(request: NextRequest) {
 // the service worker, manifest, icons and static assets are excluded.
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|sw.js|manifest.webmanifest|icons|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api|_next/static|_next/image|sw.js|manifest.webmanifest|icons|favicon.ico|llm\\.txt|\\.well-known|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
