@@ -22,6 +22,22 @@ function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function phrasePattern(search: string): RegExp {
+  // Longer phrases first (caller sorts); word boundaries fail on multi-word PT/EN phrases.
+  if (search.includes(" ")) {
+    return new RegExp(`(?<!\\w)${escapeRe(search)}(?!\\w)`, "gi");
+  }
+  return new RegExp(`\\b${escapeRe(search)}\\b`, "gi");
+}
+
+function applyCase(match: string, replace: string): string {
+  if (match === match.toUpperCase()) return replace.toUpperCase();
+  if (match[0] === match[0].toUpperCase()) {
+    return replace.charAt(0).toUpperCase() + replace.slice(1);
+  }
+  return replace;
+}
+
 /** Apply glossary replacements case-insensitively, preserving original casing where possible. */
 export function applyGlossary(text: string, sourceLang: string, targetLang: string): string {
   const src = sourceLang.split("-")[0];
@@ -31,16 +47,11 @@ export function applyGlossary(text: string, sourceLang: string, targetLang: stri
   if (!isPtToEn && !isEnToPt) return text;
 
   let out = text;
-  for (const [from, to] of PAIRS) {
+  const sorted = [...PAIRS].sort((a, b) => b[0].length - a[0].length);
+  for (const [from, to] of sorted) {
     const [search, replace] = isPtToEn ? [from, to] : [to, from];
-    const re = new RegExp(`\\b${escapeRe(search)}\\b`, "gi");
-    out = out.replace(re, (match) => {
-      if (match === match.toUpperCase()) return replace.toUpperCase();
-      if (match[0] === match[0].toUpperCase()) {
-        return replace.charAt(0).toUpperCase() + replace.slice(1);
-      }
-      return replace;
-    });
+    const re = phrasePattern(search);
+    out = out.replace(re, (match) => applyCase(match, replace));
   }
   return out;
 }

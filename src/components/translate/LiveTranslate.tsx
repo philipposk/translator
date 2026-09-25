@@ -41,6 +41,8 @@ export function LiveTranslate() {
   const [listening, setListening] = useState(false);
   const [presenting, setPresenting] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const presentRef = useRef<HTMLDivElement>(null);
+  const presentTriggerRef = useRef<HTMLElement | null>(null);
   const runRef = useRef(0); // bumped on start/stop; drops late async results
 
   // langA / langB for conversation map onto sourceLang / targetLang
@@ -58,11 +60,36 @@ export function LiveTranslate() {
 
   useEffect(() => {
     if (!presenting) return;
+    presentTriggerRef.current = document.activeElement as HTMLElement | null;
+    const root = presentRef.current;
+    const closeBtn = root?.querySelector<HTMLElement>(".tr-presentation-close");
+    closeBtn?.focus();
+
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setPresenting(false);
+      if (e.key === "Escape") {
+        setPresenting(false);
+        return;
+      }
+      if (e.key !== "Tab" || !root) return;
+      const focusable = root.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     }
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      presentTriggerRef.current?.focus();
+    };
   }, [presenting]);
 
   const lastTurn = turns[turns.length - 1];
@@ -188,7 +215,12 @@ export function LiveTranslate() {
     if (listening) live.setLang(side === "A" ? langA : langB);
   }
 
-  const engineLabel = live.engine === "webspeech" ? "On-device · free" : "Whisper";
+  const engineLabel =
+    live.engine === "webspeech"
+      ? "On-device · free"
+      : live.engine === "deepgram"
+        ? "Deepgram · streaming"
+        : "Whisper";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -311,7 +343,7 @@ export function LiveTranslate() {
       )}
 
       {presenting && (
-        <div className="tr-presentation" role="dialog" aria-label="Presentation mode">
+        <div ref={presentRef} className="tr-presentation" role="dialog" aria-modal="true" aria-label="Presentation mode">
           <button type="button" className="tr-presentation-close btn btn-ghost" onClick={() => setPresenting(false)} aria-label="Close">
             ✕
           </button>

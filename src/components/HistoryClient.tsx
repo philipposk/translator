@@ -41,20 +41,29 @@ export function HistoryClient() {
   const [open, setOpen] = useState<string | null>(null);
   const [detail, setDetail] = useState<Record<string, JobDetail>>({});
   const [busy, setBusy] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  async function load() {
-    setLoadError(null);
-    const res = await fetch("/api/jobs");
+  async function load(cursor?: string | null) {
+    if (cursor) setLoadingMore(true);
+    else setLoadError(null);
+    const q = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+    const res = await fetch(`/api/jobs${q}`);
     const data = await res.json();
     if (!res.ok) {
-      setJobs([]);
-      setLoadError(data.error || "Could not load history. Try signing in again.");
+      if (!cursor) {
+        setJobs([]);
+        setLoadError(data.error || "Could not load history. Try signing in again.");
+      }
+      setLoadingMore(false);
       return;
     }
-    setJobs(data.jobs || []);
+    setJobs((prev) => (cursor ? [...(prev || []), ...(data.jobs || [])] : data.jobs || []));
+    setNextCursor(data.nextCursor || null);
+    setLoadingMore(false);
   }
   useEffect(() => {
     load();
@@ -103,7 +112,7 @@ export function HistoryClient() {
       {loadError && (
         <p style={{ color: "#f87171", fontSize: "0.85rem", marginBottom: "0.75rem" }}>
           {loadError}{" "}
-          <button type="button" className="btn btn-ghost" style={{ padding: "0.25rem 0.5rem", fontSize: "0.78rem" }} onClick={load}>
+          <button type="button" className="btn btn-ghost" style={{ padding: "0.25rem 0.5rem", fontSize: "0.78rem" }} onClick={() => load()}>
             Retry
           </button>
         </p>
@@ -171,6 +180,19 @@ export function HistoryClient() {
           );
         })}
       </div>
+
+      {nextCursor && (
+        <div style={{ display: "flex", justifyContent: "center", marginTop: "0.75rem" }}>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={loadingMore}
+            onClick={() => load(nextCursor)}
+          >
+            {loadingMore ? "Loading…" : "Load more"}
+          </button>
+        </div>
+      )}
 
       <ConfirmModal
         open={confirmClear}

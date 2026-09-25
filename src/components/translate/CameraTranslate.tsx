@@ -5,6 +5,7 @@ import { OCR_SOURCE_LANGS, TARGET_LANGS, ocrCodeOf, labelOf } from "@/lib/langs"
 import { looksLikeGibberish, preprocessForOcr } from "@/lib/ocr";
 import { getSettings, setSettings } from "@/lib/settings";
 import { CopyButton } from "@/components/CopyButton";
+import { ModeSwitcher } from "@/components/ModeSwitcher";
 import { LangPicker } from "./LangPicker";
 
 type Stage = "idle" | "ocr" | "translating";
@@ -46,6 +47,17 @@ export function CameraTranslate() {
     return () => stopCam();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      if (stage !== "idle") cancelProcessing();
+      else if (camOn) stopCam();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, camOn]);
 
   function cancelProcessing() {
     abortRef.current?.abort();
@@ -206,6 +218,10 @@ export function CameraTranslate() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <ModeSwitcher current="camera" />
+      <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--fg-muted)", textAlign: "center" }}>
+        Use Live or Text above anytime — camera is optional. Press <kbd>Esc</kbd> to close the camera.
+      </p>
       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", justifyContent: "center" }}>
         <span style={{ fontSize: "0.8rem", color: "var(--fg-muted)" }}>Text is</span>
         <LangPicker
@@ -236,9 +252,12 @@ export function CameraTranslate() {
           </div>
         )}
         {stage !== "idle" && (
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem", color: "#fff" }}>
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem", color: "#fff", zIndex: 2 }}>
             <span className="tr-spin" /> {stage === "ocr" ? "Reading text…" : "Translating…"}
-            <button type="button" className="btn btn-ghost" onClick={cancelProcessing}>Cancel</button>
+            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", justifyContent: "center" }}>
+              <button type="button" className="btn btn-ghost" onClick={cancelProcessing}>Cancel</button>
+              <a href="/app/live" className="btn btn-primary" onClick={() => { cancelProcessing(); stopCam(); }}>Switch to Live</a>
+            </div>
           </div>
         )}
       </div>
@@ -250,6 +269,7 @@ export function CameraTranslate() {
           </button>
           <button className="btn btn-ghost" onClick={() => fileRef.current?.click()}>Upload instead</button>
           <button className="btn btn-ghost" onClick={stopCam}>Close camera</button>
+          <a href="/app/live" className="btn btn-ghost" onClick={stopCam}>Leave → Live</a>
         </div>
       )}
 

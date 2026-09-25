@@ -10,6 +10,7 @@ export type EngineStatus = {
   stt: {
     primary: string;
     groqConfigured: boolean;
+    deepgramConfigured: boolean;
   };
 };
 
@@ -31,6 +32,11 @@ export function getEngineStatus(): EngineStatus {
   if (pref !== "auto" && available.includes(pref)) primary = pref;
 
   const groq = !!process.env.GROQ_API_KEY;
+  const deepgram = !!process.env.DEEPGRAM_API_KEY;
+
+  let sttPrimary = "webspeech";
+  if (deepgram) sttPrimary = "deepgram";
+  else if (groq) sttPrimary = "groq-whisper";
 
   return {
     translation: {
@@ -40,8 +46,9 @@ export function getEngineStatus(): EngineStatus {
       googleConfigured: google,
     },
     stt: {
-      primary: groq ? "groq-whisper" : "webspeech",
+      primary: sttPrimary,
       groqConfigured: groq,
+      deepgramConfigured: deepgram,
     },
   };
 }

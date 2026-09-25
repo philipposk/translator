@@ -11,9 +11,10 @@ import { LangPicker } from "@/components/translate/LangPicker";
 import { UsageBar } from "@/components/translate/UsageBar";
 
 const ENGINES: { id: SttEngine; label: string; hint: string }[] = [
-  { id: "auto", label: "Auto", hint: "Web Speech where supported, else Whisper" },
+  { id: "auto", label: "Auto", hint: "Best available engine for your device" },
   { id: "webspeech", label: "On-device (free)", hint: "Instant, Chrome/Android only" },
   { id: "groq", label: "Whisper", hint: "Works everywhere, ~2-4s, metered" },
+  { id: "deepgram", label: "Deepgram", hint: "Low-latency streaming when configured" },
 ];
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -35,8 +36,9 @@ export function SettingsClient({ email }: { email: string | null }) {
   const [flipSide, setFlipSide] = useState(false);
   const [engines, setEngines] = useState<{
     translation: { primary: string; available: string[]; deeplConfigured: boolean; googleConfigured: boolean };
-    stt: { primary: string; groqConfigured: boolean };
+    stt: { primary: string; groqConfigured: boolean; deepgramConfigured: boolean };
   } | null>(null);
+  const [systemIssues, setSystemIssues] = useState<string[]>([]);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -52,7 +54,10 @@ export function SettingsClient({ email }: { email: string | null }) {
     setFlipSide(s.flipSide);
     fetch("/api/usage")
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d?.engines && setEngines(d.engines))
+      .then((d) => {
+        if (d?.engines) setEngines(d.engines);
+        if (d?.system && !d.system.ok) setSystemIssues(d.system.issues || []);
+      })
       .catch(() => {});
   }, []);
 
@@ -103,6 +108,15 @@ export function SettingsClient({ email }: { email: string | null }) {
       <PageHeader title="Settings" description="Defaults, usage limits, and account." />
 
       <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      {systemIssues.length > 0 && (
+        <div className="tr-health-banner" role="status">
+          <strong>Backend notice:</strong> {systemIssues[0]}
+          {systemIssues.length > 1 && (
+            <span title={systemIssues.join("\n")}> (+{systemIssues.length - 1} more)</span>
+          )}
+        </div>
+      )}
+
       <section className="glass" style={{ padding: "1rem 1.25rem" }}>
         <h2 style={sectionTitle}>Plan & usage</h2>
         <UsageBar />
@@ -123,7 +137,11 @@ export function SettingsClient({ email }: { email: string | null }) {
                 </span>
               )}
             </p>
-            <p style={{ margin: 0 }}>Fallback chain: {engines.translation.available.join(" → ")}</p>
+            <p style={{ margin: "0 0 0.5rem" }}>Fallback chain: {engines.translation.available.join(" → ")}</p>
+            <p style={{ margin: 0 }}>
+              Live STT: <strong style={{ color: "var(--fg)" }}>{engines.stt.primary}</strong>
+              {engines.stt.deepgramConfigured ? " · Deepgram ready" : " · add DEEPGRAM_API_KEY for streaming STT"}
+            </p>
           </div>
         ) : (
           <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--fg-muted)" }}>Loading…</p>
@@ -177,7 +195,9 @@ export function SettingsClient({ email }: { email: string | null }) {
             style={selectStyle}
             title={ENGINES.find((x) => x.id === engine)?.hint}
           >
-            {ENGINES.map((x) => <option key={x.id} value={x.id} style={{ background: "#15151c" }}>{x.label}</option>)}
+            {ENGINES.filter((x) => x.id !== "deepgram" || engines?.stt.deepgramConfigured).map((x) => (
+              <option key={x.id} value={x.id} style={{ background: "#15151c" }}>{x.label}</option>
+            ))}
           </select>
         </Row>
         <Row label="Conversation: auto-detect language">

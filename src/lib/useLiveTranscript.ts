@@ -5,7 +5,7 @@ import { useCallback, useRef, useState } from "react";
 import { speechCodeOf } from "./langs";
 import type { SttEngine } from "./settings";
 
-export type Engine = "webspeech" | "groq";
+export type Engine = "webspeech" | "groq" | "deepgram";
 
 export function webSpeechSupported(): boolean {
   return (
@@ -14,9 +14,11 @@ export function webSpeechSupported(): boolean {
   );
 }
 
-export function resolveEngine(prefer: SttEngine): Engine {
+export function resolveEngine(prefer: SttEngine, deepgramAvailable = false): Engine {
+  if (prefer === "deepgram" && deepgramAvailable) return "deepgram";
   if (prefer === "groq") return "groq";
   if (prefer === "webspeech") return "webspeech";
+  if (prefer === "auto" && deepgramAvailable) return "deepgram";
   return webSpeechSupported() ? "webspeech" : "groq";
 }
 
@@ -47,6 +49,9 @@ export function useLiveTranscript(cb: LiveCallbacks) {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const vadRafRef = useRef<number | null>(null);
   const mimeRef = useRef("audio/webm");
+  const wsRef = useRef<WebSocket | null>(null);
+  const dgRecRef = useRef<MediaRecorder | null>(null);
+  const deepgramAvailableRef = useRef(false);
 
   function pickMime() {
     return MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
@@ -115,6 +120,95 @@ export function useLiveTranscript(cb: LiveCallbacks) {
       } catch {
         /* already started */
       }
+    },
+    [setOn],
+  );
+
+  const stopDeepgram = useCallback(() => {
+    try {
+      wsRef.current?.close();
+    } catch {
+      /* noop */
+    }
+    wsRef.current = null;
+    try {
+      if (dgRecRef.current && dgRecRef.current.state !== "inactive") dgRecRef.current.stop();
+    } catch {
+      /* noop */
+    }
+    dgRecRef.current = null;
+  }, []);
+
+  // ---------- Deepgram live (optional — needs DEEPGRAM_API_KEY on server) ----------
+  const startDeepgram = useCallback(
+    async (langCode: string) => {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      mimeRef.current = pickMime();
+
+      const tkRes = await fetch("/api/live-token", { method: "POST" });
+      const tk = await tkRes.json();
+      if (!tk.token) throw new Error(tk.error || "Deepgram live STT is not available.");
+
+      const params = new URLSearchParams({
+        model: "nova-3",
+        punctuate: "true",
+        smart_format: "true",
+        interim_results: "true",
+        language: detectRef.current ? "multi" : langCode.split("-")[0] || "en",
+      });
+      const ws = new WebSocket(`wss://api.deepgram.com/v1/listen?${params.toString()}`, ["bearer", tk.token]);
+      ws.binaryType = "arraybuffer";
+      wsRef.current = ws;
+
+      await new Promise<void>((resolve, reject) => {
+        const t = window.setTimeout(() => reject(new Error("Live connection timed out.")), 12_000);
+        ws.onopen = () => {
+          window.clearTimeout(t);
+          resolve();
+        };
+        ws.onerror = () => {
+          window.clearTimeout(t);
+          reject(new Error("Live connection error."));
+        };
+      });
+
+      const rec = new MediaRecorder(stream, { mimeType: mimeRef.current });
+      dgRecRef.current = rec;
+      rec.ondataavailable = (e) => {
+        if (e.data?.size && ws.readyState === WebSocket.OPEN) {
+          e.data.arrayBuffer().then((b) => ws.send(b));
+        }
+      };
+      rec.start(250);
+
+      ws.onmessage = (m) => {
+        let d: any;
+        try {
+          d = JSON.parse(m.data);
+        } catch {
+          return;
+        }
+        if (d.type !== "Results") return;
+        const alt = d.channel?.alternatives?.[0];
+        const text = (alt?.transcript || "").trim();
+        if (!text) return;
+        if (d.is_final) {
+          const detected = detectRef.current ? alt?.languages?.[0] ?? null : null;
+          cbRef.current.onFinal(text, detected);
+          cbRef.current.onInterim("");
+        } else {
+          cbRef.current.onInterim(text);
+        }
+      };
+      ws.onclose = () => {
+        if (wantRef.current) {
+          wantRef.current = false;
+          cbRef.current.onError("Live connection ended. Tap Start to reconnect.");
+          setOn(false);
+        }
+      };
+      setOn(true);
     },
     [setOn],
   );
@@ -221,17 +315,44 @@ export function useLiveTranscript(cb: LiveCallbacks) {
   const start = useCallback(
     async (langCode: string, prefer: SttEngine, opts: StartOpts = {}) => {
       detectRef.current = !!opts.detect;
-      // Auto-detect requires Whisper (Web Speech can't detect language) → force groq.
-      const eng: Engine = opts.detect ? "groq" : resolveEngine(prefer);
+
+      if (!deepgramAvailableRef.current) {
+        try {
+          const r = await fetch("/api/usage");
+          if (r.ok) {
+            const d = await r.json();
+            deepgramAvailableRef.current = !!d?.engines?.stt?.deepgramConfigured;
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+
+      // Auto-detect: Deepgram multi-language when configured, else Whisper VAD.
+      let eng: Engine;
+      if (opts.detect) {
+        eng = deepgramAvailableRef.current && (prefer === "deepgram" || prefer === "auto")
+          ? "deepgram"
+          : "groq";
+      } else {
+        eng = resolveEngine(prefer, deepgramAvailableRef.current);
+      }
+
       setEngine(eng);
       langRef.current = langCode;
       wantRef.current = true;
       cbRef.current.onInterim("");
       if (eng === "webspeech") {
         startWebSpeech(langCode);
+      } else if (eng === "deepgram") {
+        try {
+          await startDeepgram(langCode);
+        } catch (e) {
+          wantRef.current = false;
+          cbRef.current.onError(e instanceof Error ? e.message : "Could not start live transcription.");
+        }
       } else {
-        // All Groq live goes through VAD (silence-cut): an idle/quiet tab sends
-        // nothing, so it can't rack up Groq cost. detectRef controls the lang param.
+        // Groq live goes through VAD (silence-cut): an idle/quiet tab sends nothing.
         try {
           await startGroqVad();
         } catch {
@@ -240,11 +361,12 @@ export function useLiveTranscript(cb: LiveCallbacks) {
         }
       }
     },
-    [startGroqVad, startWebSpeech],
+    [startDeepgram, startGroqVad, startWebSpeech],
   );
 
   const stop = useCallback(() => {
     wantRef.current = false;
+    stopDeepgram();
     if (vadRafRef.current != null) {
       cancelAnimationFrame(vadRafRef.current);
       vadRafRef.current = null;
@@ -271,7 +393,7 @@ export function useLiveTranscript(cb: LiveCallbacks) {
     recMetaRef.current = null;
     cbRef.current.onInterim("");
     setOn(false);
-  }, [setOn]);
+  }, [setOn, stopDeepgram]);
 
   // Change the recognition language mid-session (conversation mode).
   const setLang = useCallback((langCode: string) => {

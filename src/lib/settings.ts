@@ -1,7 +1,7 @@
 // Client-side user preferences, persisted to localStorage. No server round-trip.
 
 export type LiveMode = "captions" | "conversation";
-export type SttEngine = "auto" | "webspeech" | "groq";
+export type SttEngine = "auto" | "webspeech" | "groq" | "deepgram";
 export type WorkspaceMode = "live" | "text" | "file" | "camera";
 
 export type Settings = {

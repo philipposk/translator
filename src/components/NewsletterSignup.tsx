@@ -5,24 +5,37 @@ import { useState } from "react";
 export function NewsletterSignup() {
   const [email, setEmail] = useState("");
   const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     if (!email.includes("@")) {
       setError("Enter a valid email.");
       return;
     }
-    // Opens mailto for now; wire to a list provider when ready.
-    window.location.href = `mailto:support@6x7.gr?subject=Translator%20newsletter&body=Please%20add%20${encodeURIComponent(email)}%20to%20the%20newsletter.`;
-    setDone(true);
+    setBusy(true);
+    try {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Signup failed");
+      setDone(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Signup failed");
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (done) {
     return (
       <div className="tr-newsletter glass tr-newsletter-done">
-        <p>Thanks! We received your request.</p>
+        <p>Thanks — you&apos;re on the list.</p>
       </div>
     );
   }
@@ -41,8 +54,11 @@ export function NewsletterSignup() {
           placeholder="Your email"
           aria-label="Email for newsletter"
           required
+          disabled={busy}
         />
-        <button type="submit" className="btn btn-primary">Subscribe</button>
+        <button type="submit" className="btn btn-primary" disabled={busy}>
+          {busy ? "…" : "Subscribe"}
+        </button>
       </div>
       {error && <p className="tr-newsletter-error">{error}</p>}
     </form>

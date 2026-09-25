@@ -3,6 +3,7 @@ import { AuthButton } from "@/components/AuthButton";
 import { ThemeToggle } from "@/components/ThemeProvider";
 import { MobileMenu } from "@/components/MobileMenu";
 import { OutboundLink } from "@/components/OutboundLink";
+import { SiteSearch } from "@/components/SiteSearch";
 
 const NAV_LINKS = [
   { href: "/help", label: "Help" },
@@ -21,6 +22,7 @@ export function SiteNav({ showCta = true }: { showCta?: boolean }) {
           <a key={l.href} href={l.href}>{l.label}</a>
         ))}
         <OutboundLink href="https://6x7.gr">6x7.gr</OutboundLink>
+        <SiteSearch />
         <AuthButton />
         <ThemeToggle />
         {showCta && (
