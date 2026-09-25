@@ -1,10 +1,18 @@
 # Translator agent notes
 
-**Manual ops (GSC, Google OAuth):** user personal store `6x7-gsc-oauth.md`.
+Prod `https://translator.6x7.gr` · Supabase `fmrnqepyyjucnfbrqawl` · Vercel `translator`
 
-Prod `https://translator.6x7.gr` · Supabase `fmrnqepyyjucnfbrqawl`.
+## Check first
+Latest Vercel prod deploy must be **READY**. If ERROR, prod is stale — nothing you push (GSC meta, env vars) is live. Known fail: `opengraph-image` Edge Function >1MB (`NOW_SANDBOX_WORKER_MAX_MIDDLEWARE_SIZE`).
 
-## Still needs dashboards (agent can't finish alone)
-1. **GSC** — create property → HTML tag token → set Vercel `GOOGLE_SITE_VERIFICATION` → deploy → Verify → submit `sitemap.xml`
-2. **OAuth** — Supabase redirect URLs + Google Cloud redirect = `https://fmrnqepyyjucnfbrqawl.supabase.co/auth/v1/callback` (app code already correct)
-3. **Deepgram** — copy `DEEPGRAM_API_KEY` from transcriber Vercel project to translator (optional)
+## GSC (browser works if user is logged into Google)
+1. Add property → **URL prefix** `https://translator.6x7.gr/` (right panel Continue — not empty Domain on the left)
+2. HTML tag token → Vercel `GOOGLE_SITE_VERIFICATION` (+ `public/google*.html` from GSC file method if shown)
+3. Deploy READY → `curl -s https://translator.6x7.gr/ | rg google-site-verification` → Verify → Sitemaps: `sitemap.xml`
+
+## OAuth (dashboards only; app code OK)
+- Supabase redirect: `https://translator.6x7.gr/auth/callback`
+- Google redirect URI: `https://fmrnqepyyjucnfbrqawl.supabase.co/auth/v1/callback` (not the app URL)
+
+## Optional
+`DEEPGRAM_API_KEY` on Vercel — copy from transcriber project manually (CLI can't pull secrets).
