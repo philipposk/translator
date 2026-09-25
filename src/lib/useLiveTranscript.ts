@@ -30,7 +30,7 @@ export type LiveCallbacks = {
   onState?: (listening: boolean) => void;
 };
 
-export type StartOpts = { detect?: boolean };
+export type StartOpts = { detect?: boolean; langPair?: [string, string] };
 
 export function useLiveTranscript(cb: LiveCallbacks) {
   const cbRef = useRef(cb);
@@ -41,6 +41,7 @@ export function useLiveTranscript(cb: LiveCallbacks) {
 
   const wantRef = useRef(false); // the user wants to be listening
   const detectRef = useRef(false); // auto-detect language (omit lang, use VAD)
+  const langPairRef = useRef<[string, string] | null>(null);
   const langRef = useRef("en");
   const recogRef = useRef<any>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -219,8 +220,13 @@ export function useLiveTranscript(cb: LiveCallbacks) {
     try {
       const fd = new FormData();
       fd.append("audio", blob, "chunk.webm");
-      // Auto-detect: omit lang so Whisper detects it and we route by the result.
-      const q = detectRef.current ? "" : `?lang=${encodeURIComponent(langRef.current)}`;
+      // Hands-free bilingual: dual Whisper runs per language hint. Else omit lang for auto-detect.
+      let q = "";
+      if (detectRef.current && langPairRef.current) {
+        q = `?langs=${langPairRef.current.map(encodeURIComponent).join(",")}`;
+      } else if (!detectRef.current) {
+        q = `?lang=${encodeURIComponent(langRef.current)}`;
+      }
       const res = await fetch(`/api/stt-chunk${q}`, { method: "POST", body: fd });
       const data = await res.json();
       if (res.ok && data.text) cbRef.current.onFinal(data.text, data.language ?? null);
@@ -315,6 +321,7 @@ export function useLiveTranscript(cb: LiveCallbacks) {
   const start = useCallback(
     async (langCode: string, prefer: SttEngine, opts: StartOpts = {}) => {
       detectRef.current = !!opts.detect;
+      langPairRef.current = opts.langPair ?? null;
 
       if (!deepgramAvailableRef.current) {
         try {
@@ -328,12 +335,10 @@ export function useLiveTranscript(cb: LiveCallbacks) {
         }
       }
 
-      // Auto-detect: Deepgram multi-language when configured, else Whisper VAD.
+      // Hands-free auto-detect: always prefer Deepgram multi when available (low latency).
       let eng: Engine;
       if (opts.detect) {
-        eng = deepgramAvailableRef.current && (prefer === "deepgram" || prefer === "auto")
-          ? "deepgram"
-          : "groq";
+        eng = deepgramAvailableRef.current ? "deepgram" : "groq";
       } else {
         eng = resolveEngine(prefer, deepgramAvailableRef.current);
       }

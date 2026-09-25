@@ -2,6 +2,8 @@
 // transcriber's groqTranscribe. Used by the file-translate route and the live
 // Groq-chunk fallback (iOS/Safari, where the Web Speech API is unavailable).
 
+import { pickBilingualTranscript } from "./bilingual";
+
 export type Word = { start: number; end: number; word: string };
 export type Segment = {
   idx: number;
@@ -64,6 +66,36 @@ export async function transcribe(file: Blob, filename: string, language?: string
     text: data.text || "",
     segments,
     words,
+  };
+}
+
+/** Run Whisper twice (one hint per language) and pick the transcript that fits best. */
+export async function transcribeBilingual(
+  file: Blob,
+  filename: string,
+  langA: string,
+  langB: string,
+): Promise<Transcription> {
+  const [a, b] = await Promise.all([
+    transcribe(file, filename, langA),
+    transcribe(file, filename, langB),
+  ]);
+  const picked = pickBilingualTranscript(
+    [{ lang: langA, text: a.text }, { lang: langB, text: b.text }],
+    langA,
+    langB,
+  );
+  const duration = a.duration ?? b.duration;
+  if (!picked) {
+    return { engine: "groq", duration, text: "", segments: [], words: [] };
+  }
+  return {
+    engine: "groq",
+    language: picked.language,
+    duration,
+    text: picked.text,
+    segments: [],
+    words: [],
   };
 }
 

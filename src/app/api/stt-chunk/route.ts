@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/supabase/user";
-import { transcribe, friendlyTranscribeError } from "@/lib/transcribe";
+import { isValidLang } from "@/lib/langs";
+import { transcribe, transcribeBilingual, friendlyTranscribeError } from "@/lib/transcribe";
 import { overQuota, meter } from "@/lib/usage";
 import { rateLimit } from "@/lib/ratelimit";
 
@@ -25,6 +26,7 @@ export async function POST(req: NextRequest) {
   }
 
   const lang = req.nextUrl.searchParams.get("lang") || undefined;
+  const langsParam = req.nextUrl.searchParams.get("langs");
   const form = await req.formData().catch(() => null);
   const audio = form?.get("audio");
   if (!(audio instanceof Blob) || audio.size === 0) {
@@ -32,7 +34,16 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const tr = await transcribe(audio, "chunk.webm", lang);
+    let tr;
+    if (langsParam) {
+      const [langA, langB] = langsParam.split(",").map((s) => s.trim());
+      if (!langA || !langB || !isValidLang(langA) || !isValidLang(langB) || langA === langB) {
+        return NextResponse.json({ error: "Invalid langs pair" }, { status: 400 });
+      }
+      tr = await transcribeBilingual(audio, "chunk.webm", langA, langB);
+    } else {
+      tr = await transcribe(audio, "chunk.webm", lang);
+    }
     if (tr.duration) await meter(userId, tr.duration);
     return NextResponse.json({ text: tr.text.trim(), language: tr.language ?? null });
   } catch (e) {

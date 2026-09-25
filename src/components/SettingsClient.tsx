@@ -33,6 +33,7 @@ export function SettingsClient({ email }: { email: string | null }) {
   const [target, setTarget] = useState("en");
   const [engine, setEngine] = useState<SttEngine>("auto");
   const [convAuto, setConvAuto] = useState(false);
+  const [convAlternate, setConvAlternate] = useState(true);
   const [flipSide, setFlipSide] = useState(false);
   const [engines, setEngines] = useState<{
     translation: { primary: string; available: string[]; deeplConfigured: boolean; googleConfigured: boolean };
@@ -51,6 +52,7 @@ export function SettingsClient({ email }: { email: string | null }) {
     setTarget(s.targetLang === "auto" ? "en" : s.targetLang);
     setEngine(s.sttEngine);
     setConvAuto(s.convAuto);
+    setConvAlternate(s.convAlternate);
     setFlipSide(s.flipSide);
     fetch("/api/usage")
       .then((r) => (r.ok ? r.json() : null))
@@ -208,6 +210,17 @@ export function SettingsClient({ email }: { email: string | null }) {
             style={{ padding: "0.35rem 0.9rem", background: convAuto ? "var(--accent)" : "rgba(255,255,255,0.06)", color: convAuto ? "#000" : "var(--fg-muted)" }}
           >
             {convAuto ? "On" : "Off"}
+          </button>
+        </Row>
+        <Row label="Conversation: auto-switch speaker">
+          <button
+            type="button"
+            onClick={() => { const v = !convAlternate; setConvAlternate(v); setSettings({ convAlternate: v }); }}
+            className="btn"
+            style={{ padding: "0.35rem 0.9rem", background: convAlternate ? "var(--accent)" : "rgba(255,255,255,0.06)", color: convAlternate ? "#000" : "var(--fg-muted)" }}
+            title="After each phrase, listen for the other language (manual mode)"
+          >
+            {convAlternate ? "On" : "Off"}
           </button>
         </Row>
         <Row label="Face-to-face flip (Live)">

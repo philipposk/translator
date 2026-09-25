@@ -13,19 +13,21 @@ export type Settings = {
   flipSide: boolean; // rotate the top panel 180° for face-to-face seating
   sttEngine: SttEngine;
   convAuto: boolean; // conversation mode: auto-detect spoken language (Whisper) instead of manual side
+  convAlternate: boolean; // after each turn, switch to the other speaker (manual mode)
 };
 
 const KEY = "tr_settings";
 
 export const DEFAULTS: Settings = {
   mode: "live",
-  sourceLang: "auto",
+  sourceLang: "el",
   targetLang: "en",
   altLang: "en",
   liveMode: "conversation",
   flipSide: false,
   sttEngine: "auto",
   convAuto: true,
+  convAlternate: true,
 };
 
 export function getSettings(): Settings {

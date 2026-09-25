@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isSttHallucination, resolveConvLang } from "@/lib/bilingual";
 import { SOURCE_LANGS, TARGET_LANGS, labelOf, detectedToCode } from "@/lib/langs";
 import { DEFAULTS, getSettings, setSettings, type LiveMode } from "@/lib/settings";
 import { useLiveTranscript } from "@/lib/useLiveTranscript";
@@ -34,7 +35,6 @@ export function LiveTranslate() {
   const [sourceLang, setSourceLang] = useState("auto");
   const [targetLang, setTargetLang] = useState("en");
   const [active, setActive] = useState<"A" | "B">("A");
-  const [convAuto, setConvAuto] = useState(DEFAULTS.convAuto);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [interim, setInterim] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +44,7 @@ export function LiveTranslate() {
   const presentRef = useRef<HTMLDivElement>(null);
   const presentTriggerRef = useRef<HTMLElement | null>(null);
   const runRef = useRef(0); // bumped on start/stop; drops late async results
+  const lastSpeakerRef = useRef<"A" | "B" | null>(null);
 
   // langA / langB for conversation map onto sourceLang / targetLang
   const langA = sourceLang;
@@ -53,7 +54,6 @@ export function LiveTranslate() {
     const s = getSettings();
     setMode(s.liveMode);
     setFlip(s.flipSide);
-    setConvAuto(s.convAuto);
     setSourceLang(s.sourceLang);
     setTargetLang(s.targetLang === "auto" ? DEFAULTS.targetLang : s.targetLang);
   }, []);
@@ -102,7 +102,7 @@ export function LiveTranslate() {
 
   const onFinal = useCallback(
     (text: string, detLang?: string | null) => {
-      if (!text) return;
+      if (!text || isSttHallucination(text)) return;
       const run = runRef.current;
       if (mode === "captions") {
         const from =
@@ -127,19 +127,12 @@ export function LiveTranslate() {
       let spk: "A" | "B";
       let from: string;
       let to: string;
-      if (convAuto) {
-        // Translate FROM the language Whisper actually detected (not an assumed
-        // side), TO the other chosen language. Robust to a 3rd language too.
-        const code = detectedToCode(detLang) || langA;
-        spk = code === langB ? "B" : "A";
-        from = code;
-        to = code === langB ? langA : langB;
-        setActive(spk);
-      } else {
-        spk = active;
-        from = spk === "A" ? langA : langB;
-        to = spk === "A" ? langB : langA;
-      }
+      const resolved = resolveConvLang(text, detLang, langA, langB, lastSpeakerRef.current);
+      spk = resolved.speaker;
+      from = resolved.code;
+      to = from === langB ? langA : langB;
+      setActive(spk);
+      lastSpeakerRef.current = spk;
       const id = ++_tid;
       setTurns((t) => [
         ...t,
@@ -155,7 +148,7 @@ export function LiveTranslate() {
           setError(e instanceof Error ? e.message : "Translation failed");
         });
     },
-    [mode, sourceLang, targetLang, active, langA, langB, convAuto],
+    [mode, sourceLang, targetLang, langA, langB],
   );
 
   const live = useLiveTranscript({
@@ -164,7 +157,6 @@ export function LiveTranslate() {
     onError: (m) => setError(m),
     onState: setListening,
   });
-
   // keep the transcript scrolled to the newest line
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -192,10 +184,16 @@ export function LiveTranslate() {
       live.stop();
     } else {
       setTurns([]);
-      const useDetect =
-        (mode === "conversation" && convAuto) || (mode === "captions" && sourceLang === "auto");
+      const handsFree = mode === "conversation";
+      const useDetect = handsFree || (mode === "captions" && sourceLang === "auto");
+      lastSpeakerRef.current = null;
       if (useDetect) {
-        live.start(langA === "auto" ? "en" : langA, "groq", { detect: true });
+        const pair: [string, string] | undefined =
+          handsFree && langA !== "auto" && langB !== "auto" ? [langA, langB] : undefined;
+        live.start(langA === "auto" ? "en" : langA, getSettings().sttEngine, {
+          detect: true,
+          langPair: pair,
+        });
       } else {
         const lang =
           mode === "captions"
@@ -208,11 +206,6 @@ export function LiveTranslate() {
         live.start(lang, getSettings().sttEngine);
       }
     }
-  }
-
-  function switchSide(side: "A" | "B") {
-    setActive(side);
-    if (listening) live.setLang(side === "A" ? langA : langB);
   }
 
   const engineLabel =
@@ -243,7 +236,7 @@ export function LiveTranslate() {
             onClick={() => {
               setMode("conversation");
               setSettings({ liveMode: "conversation" });
-              if (sourceLang === "auto") setSourceLang("pt");
+              if (sourceLang === "auto") setSourceLang("el");
             }}
             style={pill(mode === "conversation")}
           >
@@ -295,34 +288,16 @@ export function LiveTranslate() {
         </div>
       </div>
 
-      {/* conversation: auto-detect toggle + (manual) whose-turn */}
+      {/* conversation: hands-free — no tapping during the chat */}
       {mode === "conversation" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", alignItems: "center" }}>
-          <button
-            className="btn"
-            onClick={() => { const v = !convAuto; setConvAuto(v); setSettings({ convAuto: v }); }}
-            disabled={listening}
-            title="Detect the spoken language automatically (uses Whisper; ~2-4s slower, no button pressing)"
-            style={{ ...pill(convAuto), opacity: listening ? 0.5 : 1 }}
-          >
-            <span aria-hidden="true">✨</span> Auto-detect language {convAuto ? "on" : "off"}
-          </button>
-          {convAuto ? (
-            <p style={{ fontSize: "0.78rem", color: "var(--fg-muted)", margin: 0, textAlign: "center" }}>
-              Just talk. It detects {labelOf(langA)} vs {labelOf(langB)} per turn.
-              {listening && <> Now hearing: <b style={{ color: "var(--accent)" }}>{labelOf(active === "A" ? langA : langB)}</b></>}
-            </p>
-          ) : (
-            <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
-              <button type="button" className="btn" aria-pressed={active === "A"} onClick={() => switchSide("A")} style={pill(active === "A")}>
-                <span aria-hidden="true">🗣</span> {labelOf(langA)}
-              </button>
-              <button type="button" className="btn" aria-pressed={active === "B"} onClick={() => switchSide("B")} style={pill(active === "B")}>
-                <span aria-hidden="true">🗣</span> {labelOf(langB)}
-              </button>
-            </div>
+        <p style={{ fontSize: "0.85rem", color: "var(--fg-muted)", margin: 0, textAlign: "center", lineHeight: 1.5 }}>
+          Hands-free — place the phone nearby and talk. {labelOf(langA)} and {labelOf(langB)} are detected automatically.
+          {listening && (
+            <>
+              {" "}Last heard: <b style={{ color: "var(--accent)" }}>{labelOf(active === "A" ? langA : langB)}</b>
+            </>
           )}
-        </div>
+        </p>
       )}
 
       {/* start / stop */}
