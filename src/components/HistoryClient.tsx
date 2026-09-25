@@ -5,6 +5,8 @@ import { labelOf } from "@/lib/langs";
 import type { ExportSegment } from "@/lib/export";
 import { PageHeader } from "@/components/PageHeader";
 import { ExportMenu } from "@/components/ExportMenu";
+import { ConfirmModal } from "@/components/ConfirmModal";
+import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { IconLive, IconText, IconFile, IconCamera } from "@/components/icons";
 
 type Job = {
@@ -39,6 +41,8 @@ export function HistoryClient() {
   const [open, setOpen] = useState<string | null>(null);
   const [detail, setDetail] = useState<Record<string, JobDetail>>({});
   const [busy, setBusy] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   async function load() {
     const res = await fetch("/api/jobs");
@@ -66,15 +70,16 @@ export function HistoryClient() {
     setJobs((j) => j?.filter((x) => x.id !== id) ?? null);
     if (open === id) setOpen(null);
     await fetch(`/api/jobs/${id}`, { method: "DELETE" }).catch(() => {});
+    setConfirmDelete(null);
   }
 
   async function clearAll() {
-    if (!confirm("Delete your entire translation history? This can't be undone.")) return;
     setBusy(true);
     await fetch("/api/jobs", { method: "DELETE" }).catch(() => {});
     setJobs([]);
     setOpen(null);
     setBusy(false);
+    setConfirmClear(false);
   }
 
   return (
@@ -82,13 +87,13 @@ export function HistoryClient() {
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", marginBottom: "0.5rem" }}>
         <PageHeader title="History" description="Your saved translations. Expand a row to see full text or export." />
         {!!jobs?.length && (
-          <button onClick={clearAll} disabled={busy} className="btn btn-ghost" style={{ padding: "0.4rem 0.9rem", fontSize: "0.8rem", color: "#f87171", flexShrink: 0 }}>
+          <button onClick={() => setConfirmClear(true)} disabled={busy} className="btn btn-ghost" style={{ padding: "0.4rem 0.9rem", fontSize: "0.8rem", color: "#f87171", flexShrink: 0 }}>
             Clear all
           </button>
         )}
       </div>
 
-      {jobs === null && <p style={{ color: "var(--fg-muted)" }}>Loading…</p>}
+      {jobs === null && <LoadingSkeleton lines={4} />}
       {jobs?.length === 0 && (
         <div className="glass" style={{ padding: "2.5rem 1.5rem", textAlign: "center", color: "var(--fg-muted)" }}>
           <p style={{ margin: "0 0 0.75rem" }}>No translations yet.</p>
@@ -116,7 +121,7 @@ export function HistoryClient() {
                   </div>
                 </div>
                 <button
-                  onClick={(e) => { e.stopPropagation(); del(j.id); }}
+                  onClick={(e) => { e.stopPropagation(); setConfirmDelete(j.id); }}
                   className="btn btn-ghost"
                   title="Delete"
                   style={{ padding: "0.3rem 0.6rem", fontSize: "0.8rem" }}
@@ -144,6 +149,25 @@ export function HistoryClient() {
           );
         })}
       </div>
+
+      <ConfirmModal
+        open={confirmClear}
+        title="Clear all history?"
+        message="Delete your entire translation history? This cannot be undone."
+        confirmLabel="Delete all"
+        danger
+        onConfirm={clearAll}
+        onCancel={() => setConfirmClear(false)}
+      />
+      <ConfirmModal
+        open={!!confirmDelete}
+        title="Delete translation?"
+        message="Remove this entry from your history?"
+        confirmLabel="Delete"
+        danger
+        onConfirm={() => confirmDelete && del(confirmDelete)}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </div>
   );
 }

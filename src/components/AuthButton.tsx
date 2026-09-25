@@ -37,7 +37,7 @@ export function AuthButton() {
           alignItems: "center",
           gap: "0.75rem",
           padding: "0.35rem 0.75rem",
-          borderRadius: "9999px",
+          borderRadius: "var(--btn-radius)",
           border: "1px solid rgba(255,255,255,0.1)",
           fontSize: "0.8rem",
         }}
@@ -66,7 +66,7 @@ export function AuthButton() {
       href="/login"
       style={{
         padding: "0.4rem 0.9rem",
-        borderRadius: "9999px",
+        borderRadius: "var(--btn-radius)",
         border: "1px solid rgba(255,255,255,0.1)",
         fontSize: "0.8rem",
         color: "var(--fg)",

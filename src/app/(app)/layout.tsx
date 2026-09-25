@@ -12,7 +12,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="tr-shell">
       <Sidebar email={data.user.email} />
-      <div className="tr-main">{children}</div>
+      <main id="main-content" className="tr-main">{children}</main>
       <PageAssistantWidget />
     </div>
   );

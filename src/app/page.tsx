@@ -1,14 +1,15 @@
 import { SiteNav } from "@/components/SiteNav";
 import { SiteFooter } from "@/components/SiteFooter";
+import { NewsletterSignup } from "@/components/NewsletterSignup";
 import { WORKSPACE_MODES } from "@/lib/modes";
 
-const LANGUAGES = ["Greek", "Spanish", "French", "Japanese", "Arabic", "German", "Portuguese", "Mandarin"];
+const LANGUAGES = ["Portuguese", "English", "Greek", "Spanish", "French", "Japanese", "Arabic", "German"];
 
 export default function Home() {
   return (
     <>
       <SiteNav />
-      <div style={{ maxWidth: "56rem", margin: "0 auto", padding: "3rem 1.5rem 4rem" }}>
+      <main id="main-content" style={{ maxWidth: "56rem", margin: "0 auto", padding: "3rem 1.5rem 4rem" }}>
         <div style={{ marginBottom: "3.5rem" }}>
           <p
             style={{
@@ -31,9 +32,9 @@ export default function Home() {
               marginBottom: "1.25rem",
             }}
           >
-            Translate anything,
+            Talk across languages,
             <br />
-            <span style={{ color: "var(--accent)" }}>in any language.</span>
+            <span style={{ color: "var(--accent)" }}>in real time.</span>
           </h1>
           <p
             style={{
@@ -44,8 +45,8 @@ export default function Home() {
               marginBottom: "1.5rem",
             }}
           >
-            Live captions, conversation across the table, pasted text, uploaded recordings, or text
-            your camera sees — translated instantly. Install it and use it anywhere.
+            Live conversation mode for Portuguese and English across the table. Paste text, upload
+            recordings, or scan signs with your camera. Install it and use it anywhere.
           </p>
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "2rem" }}>
             {LANGUAGES.map((lang) => (
@@ -53,22 +54,22 @@ export default function Home() {
                 key={lang}
                 style={{
                   fontSize: "0.75rem",
-                  padding: "0.25rem 0.75rem",
-                  borderRadius: "9999px",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  padding: "0.25rem 0.65rem",
+                  borderRadius: "var(--btn-radius)",
+                  border: "1px solid var(--border)",
                   color: "var(--fg-muted)",
                 }}
               >
                 {lang}
               </span>
             ))}
-            <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.75rem", color: "var(--fg-muted)" }}>
+            <span style={{ fontSize: "0.75rem", padding: "0.25rem 0.65rem", color: "var(--fg-muted)" }}>
               + more
             </span>
           </div>
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-            <a href="/app" className="btn btn-primary">
-              Open workspace →
+            <a href="/app/live" className="btn btn-primary">
+              Start live translation
             </a>
             <a href="/help" className="btn btn-ghost">
               How it works
@@ -79,15 +80,17 @@ export default function Home() {
         <h2 style={{ fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--fg-muted)", marginBottom: "1rem", fontWeight: 700 }}>
           Workspace
         </h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginBottom: "3rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
           {WORKSPACE_MODES.map((f) => (
-            <a key={f.id} href={f.href} className="glass" style={{ padding: "1.35rem", textDecoration: "none", color: "inherit", display: "block" }}>
+            <a key={f.id} href={f.href} className="glass tr-mode-card" style={{ padding: "1.35rem", textDecoration: "none", color: "inherit", display: "block" }}>
               <h3 style={{ fontWeight: 700, marginBottom: "0.45rem" }}>{f.label}</h3>
               <p style={{ color: "var(--fg-muted)", fontSize: "0.9rem", lineHeight: 1.5, margin: 0 }}>{f.description}</p>
             </a>
           ))}
         </div>
-      </div>
+
+        <NewsletterSignup />
+      </main>
       <SiteFooter />
     </>
   );

@@ -21,14 +21,14 @@ export const WORKSPACE_MODES: ModeMeta[] = [
     href: "/app/text",
     label: "Text",
     title: "Text translation",
-    description: "Paste or type text — translated as you write.",
+    description: "Paste or type text. Translated as you write.",
   },
   {
     id: "file",
     href: "/app/file",
     label: "Upload",
     title: "File transcription",
-    description: "Upload audio or video — get a translated transcript.",
+    description: "Upload audio or video and get a translated transcript.",
   },
   {
     id: "camera",

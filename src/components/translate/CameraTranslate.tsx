@@ -4,14 +4,31 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { OCR_SOURCE_LANGS, TARGET_LANGS, ocrCodeOf, labelOf } from "@/lib/langs";
 import { looksLikeGibberish, preprocessForOcr } from "@/lib/ocr";
 import { getSettings, setSettings } from "@/lib/settings";
+import { CopyButton } from "@/components/CopyButton";
 import { LangPicker } from "./LangPicker";
 
 type Stage = "idle" | "ocr" | "translating";
+
+const OCR_TIMEOUT_MS = 45_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, onTimeout: () => void): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => {
+      onTimeout();
+      reject(new Error("Reading took too long. Try a clearer photo or upload instead."));
+    }, ms);
+    promise.then(
+      (v) => { clearTimeout(t); resolve(v); },
+      (e) => { clearTimeout(t); reject(e); },
+    );
+  });
+}
 
 export function CameraTranslate() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const [camOn, setCamOn] = useState(false);
   const [camError, setCamError] = useState<string | null>(null);
   const [source, setSource] = useState("auto");
@@ -29,6 +46,13 @@ export function CameraTranslate() {
     return () => stopCam();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function cancelProcessing() {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setStage("idle");
+    setError("Cancelled.");
+  }
 
   async function startCam() {
     setCamError(null);
@@ -54,11 +78,12 @@ export function CameraTranslate() {
     setCamOn(false);
   }
 
-  async function detectFromText(text: string): Promise<string | null> {
+  async function detectFromText(text: string, signal?: AbortSignal): Promise<string | null> {
     const res = await fetch("/api/detect", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
+      signal,
     });
     const data = await res.json();
     return res.ok && data.code ? String(data.code) : null;
@@ -66,6 +91,10 @@ export function CameraTranslate() {
 
   const runOcr = useCallback(
     async (image: CanvasImageSource | Blob, w?: number, h?: number) => {
+      abortRef.current?.abort();
+      const ac = new AbortController();
+      abortRef.current = ac;
+
       setError(null);
       setOcrText("");
       setTranslation("");
@@ -85,17 +114,27 @@ export function CameraTranslate() {
           canvas = preprocessForOcr(image, width, height);
         }
 
+        if (ac.signal.aborted) return;
+
         const ocrLang = source === "auto" ? "eng" : ocrCodeOf(source);
-        let { data } = await recognize(canvas, ocrLang);
+        let { data } = await withTimeout(
+          recognize(canvas, ocrLang),
+          OCR_TIMEOUT_MS,
+          () => ac.abort(),
+        );
         let text = (data.text || "").trim().slice(0, 4000);
 
         let effectiveSource = source === "auto" ? "en" : source;
         if (source === "auto" && text) {
-          const detected = await detectFromText(text);
+          const detected = await detectFromText(text, ac.signal);
           if (detected) {
             effectiveSource = detected;
             if (looksLikeGibberish(text)) {
-              const retry = await recognize(canvas, ocrCodeOf(detected));
+              const retry = await withTimeout(
+                recognize(canvas, ocrCodeOf(detected)),
+                OCR_TIMEOUT_MS,
+                () => ac.abort(),
+              );
               const retryText = (retry.data.text || "").trim().slice(0, 4000);
               if (retryText && !looksLikeGibberish(retryText)) {
                 text = retryText;
@@ -105,6 +144,8 @@ export function CameraTranslate() {
           }
         }
 
+        if (ac.signal.aborted) return;
+
         setResolvedSource(effectiveSource);
         setOcrText(text);
         if (!text) {
@@ -113,7 +154,7 @@ export function CameraTranslate() {
           return;
         }
         if (looksLikeGibberish(text)) {
-          setError("Text hard to read — try better lighting or select the text language manually.");
+          setError("Text hard to read. Try better lighting or select the text language manually.");
         }
 
         setStage("translating");
@@ -126,6 +167,7 @@ export function CameraTranslate() {
             target_lang: target,
             mode: "document",
           }),
+          signal: ac.signal,
         });
         const tr = await res.json();
         if (!res.ok) throw new Error(tr.error || "Translation failed");
@@ -144,8 +186,10 @@ export function CameraTranslate() {
           }).catch(() => {});
         }
       } catch (e) {
+        if (ac.signal.aborted) return;
         setError(e instanceof Error ? e.message : "Could not read the image.");
       } finally {
+        if (abortRef.current === ac) abortRef.current = null;
         setStage("idle");
       }
     },
@@ -192,8 +236,9 @@ export function CameraTranslate() {
           </div>
         )}
         {stage !== "idle" && (
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.6rem", color: "#fff" }}>
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.75rem", color: "#fff" }}>
             <span className="tr-spin" /> {stage === "ocr" ? "Reading text…" : "Translating…"}
+            <button type="button" className="btn btn-ghost" onClick={cancelProcessing}>Cancel</button>
           </div>
         )}
       </div>
@@ -211,16 +256,29 @@ export function CameraTranslate() {
       {error && <p style={{ color: "#f87171", fontSize: "0.85rem", textAlign: "center" }}>{error}</p>}
 
       {(ocrText || translation) && (
-        <div className="tr-two-pane">
-          <div className="glass" style={{ padding: "1rem 1.1rem" }}>
-            <p style={titleStyle}>{sourceLabel}</p>
-            <p style={{ margin: 0, whiteSpace: "pre-wrap", color: "var(--fg-muted)" }}>{ocrText || "—"}</p>
+        <>
+          <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center", flexWrap: "wrap" }}>
+            <CopyButton text={translation} label="Copy translation" />
+            <button type="button" className="btn btn-ghost" onClick={() => { setOcrText(""); setTranslation(""); setError(null); }}>
+              Clear
+            </button>
+            {camOn && (
+              <button type="button" className="btn btn-ghost" onClick={capture} disabled={stage !== "idle"}>
+                Try again
+              </button>
+            )}
           </div>
-          <div className="glass" style={{ padding: "1rem 1.1rem" }}>
-            <p style={titleStyle}>Translation ({labelOf(target)})</p>
-            <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{translation || "—"}</p>
+          <div className="tr-two-pane">
+            <div className="glass" style={{ padding: "1rem 1.1rem" }}>
+              <p style={titleStyle}>{sourceLabel}</p>
+              <p style={{ margin: 0, whiteSpace: "pre-wrap", color: "var(--fg-muted)" }}>{ocrText || "…"}</p>
+            </div>
+            <div className="glass" style={{ padding: "1rem 1.1rem" }}>
+              <p style={titleStyle}>Translation ({labelOf(target)})</p>
+              <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{translation || "…"}</p>
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       <input

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { SOURCE_LANGS, TARGET_LANGS, labelOf, detectedToCode } from "@/lib/langs";
 import { getSettings, setSettings, type LiveMode } from "@/lib/settings";
 import { useLiveTranscript } from "@/lib/useLiveTranscript";
+import { CopyButton } from "@/components/CopyButton";
 import { LangPicker } from "./LangPicker";
 
 type Turn = {
@@ -38,6 +39,7 @@ export function LiveTranslate() {
   const [interim, setInterim] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
+  const [presenting, setPresenting] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const runRef = useRef(0); // bumped on start/stop; drops late async results
 
@@ -51,8 +53,16 @@ export function LiveTranslate() {
     setFlip(s.flipSide);
     setConvAuto(s.convAuto);
     setSourceLang(s.sourceLang);
-    setTargetLang(s.targetLang === "auto" ? "es" : s.targetLang);
+    setTargetLang(s.targetLang === "auto" ? "en" : s.targetLang);
   }, []);
+
+  const lastTurn = turns[turns.length - 1];
+  const presentText =
+    mode === "conversation" && lastTurn
+      ? lastTurn.speaker === "A"
+        ? lastTurn.translation || lastTurn.original
+        : lastTurn.translation || lastTurn.original
+      : lastTurn?.translation || lastTurn?.original || "";
 
   const onFinal = useCallback(
     (text: string, detLang?: string | null) => {
@@ -217,14 +227,25 @@ export function LiveTranslate() {
             disabled={listening}
           />
           {mode === "conversation" && (
-            <button
-              className="btn btn-ghost"
-              onClick={() => { setFlip((f) => { setSettings({ flipSide: !f }); return !f; }); }}
-              title="Rotate the top panel 180° for face-to-face seating"
-              style={{ padding: "0.4rem 0.7rem" }}
-            >
-              ⟳ Flip {flip ? "on" : "off"}
-            </button>
+            <>
+              <button
+                className="btn btn-ghost"
+                onClick={() => { setFlip((f) => { setSettings({ flipSide: !f }); return !f; }); }}
+                title="Rotate the top panel 180° for face-to-face seating"
+                style={{ padding: "0.4rem 0.7rem" }}
+              >
+                ⟳ Flip {flip ? "on" : "off"}
+              </button>
+              <button
+                className="btn btn-ghost"
+                onClick={() => setPresenting(true)}
+                disabled={!presentText}
+                title="Fullscreen large text to show your phone to the other person"
+                style={{ padding: "0.4rem 0.7rem" }}
+              >
+                📱 Show on phone
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -243,7 +264,7 @@ export function LiveTranslate() {
           </button>
           {convAuto ? (
             <p style={{ fontSize: "0.78rem", color: "var(--fg-muted)", margin: 0, textAlign: "center" }}>
-              Just talk — it detects {labelOf(langA)} vs {labelOf(langB)} per turn.
+              Just talk. It detects {labelOf(langA)} vs {labelOf(langB)} per turn.
               {listening && <> Now hearing: <b style={{ color: "var(--accent)" }}>{labelOf(active === "A" ? langA : langB)}</b></>}
             </p>
           ) : (
@@ -274,6 +295,18 @@ export function LiveTranslate() {
         <CaptionsView turns={turns} interim={interim} sourceLang={sourceLang} targetLang={targetLang} scrollRef={scrollRef} />
       ) : (
         <ConversationView turns={turns} interim={interim} active={active} langA={langA} langB={langB} flip={flip} />
+      )}
+
+      {presenting && (
+        <div className="tr-presentation" role="dialog" aria-label="Presentation mode">
+          <button type="button" className="tr-presentation-close btn btn-ghost" onClick={() => setPresenting(false)} aria-label="Close">
+            ✕
+          </button>
+          <p className="tr-presentation-text">{presentText}</p>
+          <div className="tr-presentation-actions">
+            <CopyButton text={presentText} label="Copy" />
+          </div>
+        </div>
       )}
     </div>
   );

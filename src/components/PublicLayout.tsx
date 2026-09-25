@@ -11,7 +11,7 @@ export function PublicLayout({
   return (
     <>
       <SiteNav showCta />
-      <main className="tr-public">
+      <main id="main-content" className="tr-public">
         <article className="tr-doc glass">
           <h1>{title}</h1>
           {children}

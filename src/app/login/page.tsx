@@ -18,7 +18,7 @@ export default function LoginPage() {
     setError(null);
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${location.origin}/auth/callback?next=/app` },
+      options: { emailRedirectTo: `${location.origin}/auth/callback?next=/app/live` },
     });
     setLoading(false);
     if (error) setError(error.message);
@@ -29,7 +29,7 @@ export default function LoginPage() {
     setError(null);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${location.origin}/auth/callback?next=/app` },
+      options: { redirectTo: `${location.origin}/auth/callback?next=/app/live` },
     });
     if (error) setError(error.message);
   }
@@ -42,7 +42,7 @@ export default function LoginPage() {
           Translator
         </a>
       </header>
-      <div style={{ flex: 1, maxWidth: "26rem", margin: "0 auto", padding: "2rem 1.5rem 4rem", width: "100%" }}>
+      <main id="main-content" style={{ flex: 1, maxWidth: "26rem", margin: "0 auto", padding: "2rem 1.5rem 4rem", width: "100%" }}>
         <div style={{ textAlign: "center", marginBottom: "2rem" }}>
           <h1 style={{ fontSize: "1.75rem", fontWeight: 700, marginBottom: "0.5rem" }}>
             Sign in to Translator
@@ -59,53 +59,48 @@ export default function LoginPage() {
         ) : (
           <>
             <button
+              type="button"
               onClick={signInWithGoogle}
-              className="btn"
-              style={{ width: "100%", background: "white", color: "black", marginBottom: "1rem" }}
+              className="btn btn-ghost"
+              style={{ width: "100%", marginBottom: "1rem", justifyContent: "center" }}
             >
               Continue with Google
             </button>
-
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.7rem", color: "var(--fg-muted)", margin: "1rem 0" }}>
-              <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", margin: "1rem 0", color: "var(--fg-muted)", fontSize: "0.8rem" }}>
+              <hr style={{ flex: 1, border: 0, borderTop: "1px solid var(--border)" }} />
               or
-              <span style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.08)" }} />
+              <hr style={{ flex: 1, border: 0, borderTop: "1px solid var(--border)" }} />
             </div>
-
-            <form onSubmit={signInWithEmail} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <form onSubmit={signInWithEmail}>
+              <label style={{ display: "block", fontSize: "0.8rem", color: "var(--fg-muted)", marginBottom: "0.35rem" }}>
+                Email
+              </label>
               <input
                 type="email"
-                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                required
+                autoComplete="email"
+                placeholder="you@company.com"
                 style={{
-                  padding: "0.7rem 0.9rem",
-                  borderRadius: "0.75rem",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  background: "rgba(255,255,255,0.03)",
+                  width: "100%",
+                  padding: "0.65rem 0.85rem",
+                  borderRadius: "var(--btn-radius)",
+                  border: "1px solid var(--border)",
+                  background: "rgba(255,255,255,0.04)",
                   color: "var(--fg)",
+                  marginBottom: "0.75rem",
                   fontSize: "0.9rem",
                 }}
               />
               <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: "100%" }}>
-                {loading ? "Sending…" : "Email me a magic link"}
+                {loading ? "Sending…" : "Send magic link"}
               </button>
             </form>
           </>
         )}
-
-        {error && (
-          <p style={{ marginTop: "1rem", textAlign: "center", color: "#f87171", fontSize: "0.85rem" }}>
-            {error}
-          </p>
-        )}
-
-        <p style={{ marginTop: "1.5rem", textAlign: "center", fontSize: "0.75rem", color: "var(--fg-muted)", lineHeight: 1.5 }}>
-          By signing in you agree to our <a href="/terms" style={{ color: "var(--accent)" }}>Terms</a> and{" "}
-          <a href="/privacy" style={{ color: "var(--accent)" }}>Privacy Policy</a>.
-        </p>
-      </div>
+        {error && <p style={{ color: "#f87171", fontSize: "0.85rem", marginTop: "1rem", textAlign: "center" }}>{error}</p>}
+      </main>
       <SiteFooter />
     </div>
   );

@@ -18,14 +18,14 @@ export type Settings = {
 const KEY = "tr_settings";
 
 export const DEFAULTS: Settings = {
-  mode: "text",
-  sourceLang: "auto",
+  mode: "live",
+  sourceLang: "pt",
   targetLang: "en",
-  altLang: "es",
-  liveMode: "captions",
+  altLang: "en",
+  liveMode: "conversation",
   flipSide: false,
   sttEngine: "auto",
-  convAuto: false,
+  convAuto: true,
 };
 
 export function getSettings(): Settings {

@@ -1,3 +1,40 @@
+import { FaqAccordion } from "@/components/FaqAccordion";
+
+const FAQ = [
+  {
+    q: "How do I translate live between Portuguese and English?",
+    a: "Open Live mode, switch to Conversation, set Portuguese and English, enable auto-detect, then tap Start listening. Use Flip for face-to-face seating or Show on phone for large fullscreen text.",
+  },
+  {
+    q: "What is Captions mode?",
+    a: "Captions mode shows one language pair with real-time subtitles. Good for lectures, videos, or single-speaker content.",
+  },
+  {
+    q: "How does Text mode work?",
+    a: "Paste or type text. Translation runs automatically after a short pause.",
+  },
+  {
+    q: "What file types can I upload?",
+    a: "m4a, mp3, wav, mp4, and webm up to 25 MB. The file is transcribed, then translated in batches.",
+  },
+  {
+    q: "How do I use Camera mode?",
+    a: "Point your camera at printed text or upload a photo. Use good lighting and hold steady. Select the text language manually if auto-detect struggles.",
+  },
+  {
+    q: "What are the usage limits?",
+    a: "Free plans include monthly caps on voice transcription seconds and translated characters. Check the usage bar on any workspace page or Settings.",
+  },
+  {
+    q: "Can I install Translator as an app?",
+    a: "On supported browsers, use Install app in the sidebar to add Translator to your home screen.",
+  },
+  {
+    q: "What is the page assistant?",
+    a: "The floating assistant can translate text, check usage, navigate modes, and read the page. It only performs real actions through grounded capabilities.",
+  },
+];
+
 export function HelpContent() {
   return (
     <>
@@ -5,42 +42,14 @@ export function HelpContent() {
         <h2>Getting started</h2>
         <p>
           Sign in with Google or a magic link. Your 6x7 account works across all 6x7 apps. Pick a
-          mode from the left sidebar — Live, Text, Upload, or Camera — and choose source/target
+          mode from the left sidebar (Live, Text, Upload, or Camera) and choose source and target
           languages. Leave source on <strong>Detect language</strong> when you are unsure.
         </p>
       </section>
 
       <section>
-        <h2>Modes</h2>
-        <dl className="tr-faq">
-          <div>
-            <dt>Live</dt>
-            <dd>
-              Captions mode shows one language pair with real-time subtitles. Conversation mode runs
-              a two-sided dialog — flip the top panel 180° for face-to-face seating. Auto-detect is
-              available in Settings for conversation mode.
-            </dd>
-          </div>
-          <div>
-            <dt>Text</dt>
-            <dd>Paste or type text. Translation runs automatically after a short pause.</dd>
-          </div>
-          <div>
-            <dt>Upload</dt>
-            <dd>
-              Drop audio or video (m4a, mp3, wav, mp4, webm, up to 25 MB). The file is transcribed,
-              then translated in batches. Detected language is shown when it differs from your
-              selection.
-            </dd>
-          </div>
-          <div>
-            <dt>Camera</dt>
-            <dd>
-              Point your camera at printed text or upload a photo. For best results use good lighting
-              and hold steady; select the text language manually if auto-detect struggles.
-            </dd>
-          </div>
-        </dl>
+        <h2>FAQ</h2>
+        <FaqAccordion items={FAQ} />
       </section>
 
       <section>
@@ -53,76 +62,41 @@ export function HelpContent() {
       </section>
 
       <section>
-        <h2>Usage limits</h2>
-        <p>
-          Free plans include monthly caps on voice/file transcription seconds and translated
-          characters. Check the usage bar at the top of any workspace page or open Settings → Plan
-          &amp; usage.
-        </p>
-      </section>
-
-      <section>
-        <h2>Install as an app</h2>
-        <p>
-          On supported browsers, use <strong>Install app</strong> in the sidebar to add Translator
-          to your home screen. It works offline for cached pages; translation requires a network
-          connection.
-        </p>
-      </section>
-
-      <section>
         <h2>API (authenticated)</h2>
         <p>
-          Translator exposes REST endpoints for signed-in users. There is no public API key or MCP
-          server today — integrations use your session cookie after sign-in.
+          Translator exposes REST endpoints for signed-in users. There is no public API key today.
+          Integrations use your session cookie after sign-in.
         </p>
         <ul>
           <li>
-            <code>POST /api/translate</code> — text translation ({`{ text, source_lang, target_lang, mode }`})
+            <code>POST /api/translate</code>: text translation ({`{ text, source_lang, target_lang, mode }`})
           </li>
           <li>
-            <code>POST /api/detect</code> — language detection ({`{ text }`})
+            <code>POST /api/detect</code>: language detection ({`{ text }`})
           </li>
           <li>
-            <code>POST /api/stt-chunk</code> — live speech chunk (multipart audio)
+            <code>POST /api/stt-chunk</code>: live speech chunk (multipart audio)
           </li>
           <li>
-            <code>POST /api/file/transcribe</code> then <code>POST /api/file/translate-batch</code>{" "}
-            — file pipeline
+            <code>POST /api/file/transcribe</code> then <code>POST /api/file/translate-batch</code>
           </li>
           <li>
-            <code>GET /api/jobs</code> — translation history
+            <code>GET /api/jobs</code>: translation history
           </li>
           <li>
-            <code>GET /api/usage</code> — monthly quota usage
+            <code>GET /api/usage</code>: monthly quota usage
           </li>
         </ul>
         <p>
           Rate limits and monthly quotas apply. Contact{" "}
-          <a href="mailto:support@6x7.gr">support@6x7.gr</a> if you need higher limits or a
-          dedicated integration.
-        </p>
-      </section>
-
-      <section>
-        <h2>Page assistant</h2>
-        <p>
-          A floating assistant (bottom-right) can translate text, check your usage, navigate modes, and
-          read the page. It uses grounded capabilities — it only performs real actions, never fakes
-          results. Voice uses your browser mic by default; server TTS/STT when configured.
-        </p>
-        <p>
-          For external AI agents: <a href="/llm.txt">/llm.txt</a> and{" "}
-          <a href="/.well-known/llm-actions.json">/.well-known/llm-actions.json</a>. Drive the assistant via{" "}
-          <code>POST /api/assistant/v1/agent</code> (authenticated).
+          <a href="mailto:support@6x7.gr">support@6x7.gr</a> for higher limits.
         </p>
       </section>
 
       <section>
         <h2>Export</h2>
         <p>
-          After file transcription, use <strong>Export</strong> for SRT, VTT, or bilingual TXT. History
-          entries with timed segments support the same formats; plain text jobs export as TXT.
+          After file transcription, use <strong>Export</strong> for SRT, VTT, or bilingual TXT.
         </p>
       </section>
 
@@ -130,8 +104,9 @@ export function HelpContent() {
         <h2>Support</h2>
         <p>
           Questions or bugs: <a href="mailto:support@6x7.gr">support@6x7.gr</a>. To delete your account,
-          go to Settings → Danger zone (or clear History first if you only want translations removed).
+          go to Settings and the Danger zone.
         </p>
+        <p className="tr-doc-meta">Last updated: September 2026</p>
       </section>
     </>
   );

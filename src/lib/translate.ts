@@ -2,6 +2,7 @@
 // Detect-before-translate when source is "auto".
 
 import { resolveSourceLang } from "./detect";
+import { applyGlossary } from "./glossary";
 import { hasLLM, llmText } from "./llm";
 import { labelOf } from "./langs";
 import type { Segment } from "./transcribe";
@@ -33,7 +34,7 @@ function systemPrompt(targetLang: string, sourceLang: string, mode: TranslateMod
   return (
     `You are a professional translator. Translate the user's text from ${from} into ${target}.` +
     register +
-    ` Keep names, numbers, URLs and code unchanged. Output ONLY the translation — no notes, no quotes, no explanations.` +
+    ` Keep names, numbers, URLs and code unchanged. Output ONLY the translation, no notes, no quotes, no explanations.` +
     ` If the text is already in ${target}, return it unchanged.`
   );
 }
@@ -202,8 +203,10 @@ export async function translateText(
   const mode = opts.mode ?? "document";
   const { source, detected } = await resolveSourceLang(opts.sourceLang || "auto", clean);
   const result = await runEngines(clean, source, targetLang, mode);
+  const translation = applyGlossary(result.translation, source, targetLang);
   return {
     ...result,
+    translation,
     detected_source_lang: detected?.code ?? (opts.sourceLang === "auto" ? source : opts.sourceLang) ?? null,
   };
 }

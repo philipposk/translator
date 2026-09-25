@@ -1,3 +1,5 @@
+import { OutboundLink } from "@/components/OutboundLink";
+
 const LINKS = [
   { href: "/help", label: "Help" },
   { href: "/about", label: "About" },
@@ -17,9 +19,7 @@ export function SiteFooter({ compact }: { compact?: boolean }) {
       </nav>
       <span>
         Translator · part of{" "}
-        <a href="https://6x7.gr" target="_blank" rel="noopener noreferrer">
-          6x7.gr
-        </a>
+        <OutboundLink href="https://6x7.gr">6x7.gr</OutboundLink>
       </span>
     </footer>
   );
