@@ -24,6 +24,9 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: SITE_NAME },
   icons: { icon: "/icons/icon-192.png", apple: "/icons/icon-192.png" },
   metadataBase: new URL(SITE_URL),
+  ...(process.env.GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } }
+    : {}),
 };
 
 export const viewport: Viewport = {
