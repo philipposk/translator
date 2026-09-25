@@ -48,7 +48,7 @@ export function FileTranslate() {
     try {
       const CAP = 25 * 1024 * 1024;
       if (file.size > CAP) {
-        throw new Error(`This file is ${mb(file.size)} — over the 25 MB limit. Try a shorter clip.`);
+        throw new Error(`This file is ${mb(file.size)}, over the 25 MB limit. Try a shorter clip.`);
       }
       const ext = (file.name.split(".").pop() || "bin").toLowerCase();
 
@@ -143,7 +143,7 @@ export function FileTranslate() {
           <>
             <p style={{ fontSize: "1.05rem", margin: "0 0 0.4rem" }}>Drop an audio or video file, or click to choose</p>
             <p style={{ margin: 0, color: "var(--fg-muted)", fontSize: "0.85rem" }}>
-              m4a · mp3 · wav · mp4 · webm — up to 25 MB · leave source on Detect language
+              m4a · mp3 · wav · mp4 · webm, up to 25 MB. Leave source on Detect language.
             </p>
           </>
         )}

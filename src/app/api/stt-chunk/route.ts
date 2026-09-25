@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUserId } from "@/lib/supabase/user";
 import { transcribe, friendlyTranscribeError } from "@/lib/transcribe";
 import { overQuota, meter } from "@/lib/usage";
+import { rateLimit } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -14,6 +15,10 @@ export const maxDuration = 60;
 export async function POST(req: NextRequest) {
   const userId = await getUserId();
   if (!userId) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+
+  if (!(await rateLimit(`stt:${userId}`, 30, 60_000))) {
+    return NextResponse.json({ error: "Too many speech requests. Slow down." }, { status: 429 });
+  }
 
   if (await overQuota(userId)) {
     return NextResponse.json({ error: "Monthly transcription limit reached." }, { status: 429 });

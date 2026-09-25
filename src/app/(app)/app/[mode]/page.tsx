@@ -12,7 +12,7 @@ export async function generateMetadata({ params }: { params: Promise<{ mode: str
   const { mode } = await params;
   if (!isWorkspaceMode(mode)) return {};
   const meta = modeMeta(mode);
-  return { title: `${meta.title} — Translator` };
+  return { title: `${meta.title} | Translator` };
 }
 
 export default async function ModePage({ params }: { params: Promise<{ mode: string }> }) {

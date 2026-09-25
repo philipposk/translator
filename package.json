@@ -10,7 +10,7 @@
     "build:assistant": "pnpm --filter @page-assistant/core build && pnpm --filter @page-assistant/server build && pnpm --filter @page-assistant/widget build",
     "build": "pnpm build:assistant && next build --webpack",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "next lint",
     "test": "vitest run"
   },
   "dependencies": {

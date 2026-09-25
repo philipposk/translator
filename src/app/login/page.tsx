@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { LogoMark } from "@/components/icons";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -11,6 +11,11 @@ export default function LoginPage() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const err = new URLSearchParams(window.location.search).get("error");
+    if (err === "auth") setError("Sign-in failed. Try again or use a different method.");
+  }, []);
 
   async function signInWithEmail(e: React.FormEvent) {
     e.preventDefault();

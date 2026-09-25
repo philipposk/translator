@@ -19,7 +19,7 @@ const KEY = "tr_settings";
 
 export const DEFAULTS: Settings = {
   mode: "live",
-  sourceLang: "pt",
+  sourceLang: "auto",
   targetLang: "en",
   altLang: "en",
   liveMode: "conversation",

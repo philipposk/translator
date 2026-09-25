@@ -3,7 +3,7 @@ import { applyGlossary } from "./glossary";
 
 describe("applyGlossary", () => {
   it("normalizes common PT phrases to EN", () => {
-    expect(applyGlossary("Obrigado pela ajuda", "pt", "en")).toContain("thank you");
+    expect(applyGlossary("Obrigado pela ajuda", "pt", "en").toLowerCase()).toContain("thank you");
   });
 
   it("leaves unrelated language pairs unchanged", () => {

@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
 
   if (!(await rateLimit(`tr:${userId}`, 60, 60_000))) {
-    return NextResponse.json({ error: "Too many requests — slow down." }, { status: 429 });
+    return NextResponse.json({ error: "Too many requests. Slow down." }, { status: 429 });
   }
 
   let body: { text?: string; source_lang?: string; target_lang?: string; mode?: TranslateMode };

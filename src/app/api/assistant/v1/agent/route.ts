@@ -10,6 +10,7 @@ import { routerFromEnv } from "@page-assistant/server";
 import { assistantRateLimit, requireAssistantUser } from "@/lib/assistant/auth";
 import { serverCapabilities } from "@/lib/assistant/capabilities-server";
 import { assistantMeta, ASSISTANT_KNOWLEDGE, ASSISTANT_SUGGESTIONS } from "@/lib/assistant/meta";
+import { publicApiError } from "@/lib/api-error";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -56,6 +57,6 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
+    return NextResponse.json({ error: publicApiError(e, "Assistant is temporarily unavailable.") }, { status: 500 });
   }
 }

@@ -10,9 +10,7 @@ export function AppRedirect() {
 
   useEffect(() => {
     const saved = getSettings().mode;
-    // Never auto-open camera; primary use is live conversation.
-    const mode = saved === "camera" ? "live" : saved;
-    router.replace(modeMeta(mode).href);
+    router.replace(modeMeta(saved).href);
   }, [router]);
 
   return (

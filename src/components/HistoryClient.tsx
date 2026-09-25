@@ -43,11 +43,18 @@ export function HistoryClient() {
   const [busy, setBusy] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   async function load() {
+    setLoadError(null);
     const res = await fetch("/api/jobs");
     const data = await res.json();
-    setJobs(res.ok ? data.jobs || [] : []);
+    if (!res.ok) {
+      setJobs([]);
+      setLoadError(data.error || "Could not load history. Try signing in again.");
+      return;
+    }
+    setJobs(data.jobs || []);
   }
   useEffect(() => {
     load();
@@ -93,6 +100,14 @@ export function HistoryClient() {
         )}
       </div>
 
+      {loadError && (
+        <p style={{ color: "#f87171", fontSize: "0.85rem", marginBottom: "0.75rem" }}>
+          {loadError}{" "}
+          <button type="button" className="btn btn-ghost" style={{ padding: "0.25rem 0.5rem", fontSize: "0.78rem" }} onClick={load}>
+            Retry
+          </button>
+        </p>
+      )}
       {jobs === null && <LoadingSkeleton lines={4} />}
       {jobs?.length === 0 && (
         <div className="glass" style={{ padding: "2.5rem 1.5rem", textAlign: "center", color: "var(--fg-muted)" }}>
@@ -109,7 +124,14 @@ export function HistoryClient() {
           const segments = Array.isArray(full.segments) ? full.segments : null;
           return (
             <div key={j.id} className="glass" style={{ padding: "0.85rem 1rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", cursor: "pointer" }} onClick={() => toggle(j.id)}>
+              <div
+                role="button"
+                tabIndex={0}
+                aria-expanded={isOpen}
+                style={{ display: "flex", alignItems: "center", gap: "0.6rem", cursor: "pointer" }}
+                onClick={() => toggle(j.id)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(j.id); } }}
+              >
                 <span aria-hidden style={{ display: "flex", color: "var(--fg-muted)" }}>{KIND_ICON[j.kind || "text"] || <IconText size={16} />}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: "0.8rem", color: "var(--fg-muted)" }}>
@@ -123,10 +145,10 @@ export function HistoryClient() {
                 <button
                   onClick={(e) => { e.stopPropagation(); setConfirmDelete(j.id); }}
                   className="btn btn-ghost"
-                  title="Delete"
+                  aria-label="Delete translation"
                   style={{ padding: "0.3rem 0.6rem", fontSize: "0.8rem" }}
                 >
-                  ✕
+                  <span aria-hidden="true">✕</span>
                 </button>
               </div>
               {isOpen && (

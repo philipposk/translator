@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { SOURCE_LANGS, TARGET_LANGS } from "@/lib/langs";
-import { getSettings, setSettings, type SttEngine } from "@/lib/settings";
+import { getSettings, setSettings, type LiveMode, type SttEngine, type WorkspaceMode } from "@/lib/settings";
+import { WORKSPACE_MODES } from "@/lib/modes";
 import { createClient } from "@/lib/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -25,10 +26,13 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 export function SettingsClient({ email }: { email: string | null }) {
+  const [mode, setMode] = useState<WorkspaceMode>("live");
+  const [liveMode, setLiveMode] = useState<LiveMode>("conversation");
   const [source, setSource] = useState("auto");
   const [target, setTarget] = useState("en");
   const [engine, setEngine] = useState<SttEngine>("auto");
   const [convAuto, setConvAuto] = useState(false);
+  const [flipSide, setFlipSide] = useState(false);
   const [engines, setEngines] = useState<{
     translation: { primary: string; available: string[]; deeplConfigured: boolean; googleConfigured: boolean };
     stt: { primary: string; groqConfigured: boolean };
@@ -39,10 +43,13 @@ export function SettingsClient({ email }: { email: string | null }) {
 
   useEffect(() => {
     const s = getSettings();
+    setMode(s.mode);
+    setLiveMode(s.liveMode);
     setSource(s.sourceLang);
     setTarget(s.targetLang === "auto" ? "en" : s.targetLang);
     setEngine(s.sttEngine);
     setConvAuto(s.convAuto);
+    setFlipSide(s.flipSide);
     fetch("/api/usage")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d?.engines && setEngines(d.engines))
@@ -112,7 +119,7 @@ export function SettingsClient({ email }: { email: string | null }) {
               ) : (
                 <span>
                   {" "}
-                  · DeepL not configured — add <code>DEEPL_API_KEY</code> in Vercel for best quality
+                  · DeepL not configured. Add <code>DEEPL_API_KEY</code> in Vercel for best quality.
                 </span>
               )}
             </p>
@@ -133,6 +140,30 @@ export function SettingsClient({ email }: { email: string | null }) {
 
       <section className="glass" style={{ padding: "0.5rem 1.25rem 1rem" }}>
         <h2 style={sectionTitle}>Defaults</h2>
+        <p style={{ fontSize: "0.82rem", color: "var(--fg-muted)", margin: "0 0 0.5rem", lineHeight: 1.45 }}>
+          Saved on this device. Languages and mode update automatically when you use the workspace.
+        </p>
+        <Row label="Open app in">
+          <select
+            value={mode}
+            onChange={(e) => { const v = e.target.value as WorkspaceMode; setMode(v); setSettings({ mode: v }); }}
+            style={selectStyle}
+          >
+            {WORKSPACE_MODES.map((m) => (
+              <option key={m.id} value={m.id} style={{ background: "#15151c" }}>{m.label}</option>
+            ))}
+          </select>
+        </Row>
+        <Row label="Live mode default">
+          <select
+            value={liveMode}
+            onChange={(e) => { const v = e.target.value as LiveMode; setLiveMode(v); setSettings({ liveMode: v }); }}
+            style={selectStyle}
+          >
+            <option value="conversation" style={{ background: "#15151c" }}>Conversation</option>
+            <option value="captions" style={{ background: "#15151c" }}>Captions</option>
+          </select>
+        </Row>
         <Row label="Default source language">
           <LangPicker value={source} options={SOURCE_LANGS} ariaLabel="Default source" onChange={(c) => { setSource(c); setSettings({ sourceLang: c }); }} />
         </Row>
@@ -151,11 +182,22 @@ export function SettingsClient({ email }: { email: string | null }) {
         </Row>
         <Row label="Conversation: auto-detect language">
           <button
+            type="button"
             onClick={() => { const v = !convAuto; setConvAuto(v); setSettings({ convAuto: v }); }}
             className="btn"
             style={{ padding: "0.35rem 0.9rem", background: convAuto ? "var(--accent)" : "rgba(255,255,255,0.06)", color: convAuto ? "#000" : "var(--fg-muted)" }}
           >
             {convAuto ? "On" : "Off"}
+          </button>
+        </Row>
+        <Row label="Face-to-face flip (Live)">
+          <button
+            type="button"
+            onClick={() => { const v = !flipSide; setFlipSide(v); setSettings({ flipSide: v }); }}
+            className="btn"
+            style={{ padding: "0.35rem 0.9rem", background: flipSide ? "var(--accent)" : "rgba(255,255,255,0.06)", color: flipSide ? "#000" : "var(--fg-muted)" }}
+          >
+            {flipSide ? "On" : "Off"}
           </button>
         </Row>
       </section>

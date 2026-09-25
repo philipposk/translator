@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SOURCE_LANGS, TARGET_LANGS, labelOf, detectedToCode } from "@/lib/langs";
-import { getSettings, setSettings, type LiveMode } from "@/lib/settings";
+import { DEFAULTS, getSettings, setSettings, type LiveMode } from "@/lib/settings";
 import { useLiveTranscript } from "@/lib/useLiveTranscript";
 import { CopyButton } from "@/components/CopyButton";
 import { LangPicker } from "./LangPicker";
@@ -29,12 +29,12 @@ async function translateLine(text: string, source: string, target: string): Prom
 }
 
 export function LiveTranslate() {
-  const [mode, setMode] = useState<LiveMode>("captions");
-  const [flip, setFlip] = useState(false);
+  const [mode, setMode] = useState<LiveMode>(DEFAULTS.liveMode);
+  const [flip, setFlip] = useState(DEFAULTS.flipSide);
   const [sourceLang, setSourceLang] = useState("auto");
-  const [targetLang, setTargetLang] = useState("es");
-  const [active, setActive] = useState<"A" | "B">("A"); // conversation: who's speaking
-  const [convAuto, setConvAuto] = useState(false); // auto-detect spoken language
+  const [targetLang, setTargetLang] = useState("en");
+  const [active, setActive] = useState<"A" | "B">("A");
+  const [convAuto, setConvAuto] = useState(DEFAULTS.convAuto);
   const [turns, setTurns] = useState<Turn[]>([]);
   const [interim, setInterim] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -53,8 +53,17 @@ export function LiveTranslate() {
     setFlip(s.flipSide);
     setConvAuto(s.convAuto);
     setSourceLang(s.sourceLang);
-    setTargetLang(s.targetLang === "auto" ? "en" : s.targetLang);
+    setTargetLang(s.targetLang === "auto" ? DEFAULTS.targetLang : s.targetLang);
   }, []);
+
+  useEffect(() => {
+    if (!presenting) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setPresenting(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [presenting]);
 
   const lastTurn = turns[turns.length - 1];
   const presentText =
@@ -187,18 +196,22 @@ export function LiveTranslate() {
       <div className="glass" style={{ padding: "0.85rem 1rem", display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", gap: "0.4rem", alignItems: "center" }}>
           <button
+            type="button"
             className="btn"
+            aria-pressed={mode === "captions"}
             onClick={() => { setMode("captions"); setSettings({ liveMode: "captions" }); }}
             style={pill(mode === "captions")}
           >
             Captions
           </button>
           <button
+            type="button"
             className="btn"
+            aria-pressed={mode === "conversation"}
             onClick={() => {
               setMode("conversation");
               setSettings({ liveMode: "conversation" });
-              if (sourceLang === "auto") setSourceLang("en");
+              if (sourceLang === "auto") setSourceLang("pt");
             }}
             style={pill(mode === "conversation")}
           >
@@ -243,7 +256,7 @@ export function LiveTranslate() {
                 title="Fullscreen large text to show your phone to the other person"
                 style={{ padding: "0.4rem 0.7rem" }}
               >
-                📱 Show on phone
+                <span aria-hidden="true">📱</span> Show on phone
               </button>
             </>
           )}
@@ -260,7 +273,7 @@ export function LiveTranslate() {
             title="Detect the spoken language automatically (uses Whisper; ~2-4s slower, no button pressing)"
             style={{ ...pill(convAuto), opacity: listening ? 0.5 : 1 }}
           >
-            ✨ Auto-detect language {convAuto ? "on" : "off"}
+            <span aria-hidden="true">✨</span> Auto-detect language {convAuto ? "on" : "off"}
           </button>
           {convAuto ? (
             <p style={{ fontSize: "0.78rem", color: "var(--fg-muted)", margin: 0, textAlign: "center" }}>
@@ -269,11 +282,11 @@ export function LiveTranslate() {
             </p>
           ) : (
             <div style={{ display: "flex", gap: "0.5rem", justifyContent: "center" }}>
-              <button className="btn" onClick={() => switchSide("A")} style={pill(active === "A")}>
-                🗣 {labelOf(langA)}
+              <button type="button" className="btn" aria-pressed={active === "A"} onClick={() => switchSide("A")} style={pill(active === "A")}>
+                <span aria-hidden="true">🗣</span> {labelOf(langA)}
               </button>
-              <button className="btn" onClick={() => switchSide("B")} style={pill(active === "B")}>
-                🗣 {labelOf(langB)}
+              <button type="button" className="btn" aria-pressed={active === "B"} onClick={() => switchSide("B")} style={pill(active === "B")}>
+                <span aria-hidden="true">🗣</span> {labelOf(langB)}
               </button>
             </div>
           )}

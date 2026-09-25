@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { ASSISTANT_BASE, ASSISTANT_KNOWLEDGE, ASSISTANT_SUGGESTIONS } from "@/lib/assistant/meta";
 import { clientCapabilities } from "@/lib/assistant/capabilities-client";
@@ -10,6 +10,8 @@ import { createClient } from "@/lib/supabase/client";
 /** Floating grounded assistant — powered by @page-assistant/widget. */
 export function PageAssistantWidget() {
   const path = usePathname();
+  const pathRef = useRef(path);
+  pathRef.current = path;
 
   useEffect(() => {
     let cancelled = false;
@@ -32,16 +34,11 @@ export function PageAssistantWidget() {
         autoScan: true,
         autoSpeak: false,
         memory: "persistent",
-        getPageState: () => ({
-          path,
-          mode: path.match(/\/app\/(\w+)/)?.[1] ?? null,
-        }),
+        getPageState: () => {
+          const p = pathRef.current;
+          return { path: p, mode: p.match(/\/app\/(\w+)/)?.[1] ?? null };
+        },
         settingsPageUrl: "/settings#assistant",
-        // Chat history. Default "account": chats are saved to the user's account (translator_assistant_chats,
-        // readable only by their owner via RLS, deleted after 12 months without activity) so they follow the
-        // user across devices. In the assistant's settings (Data tab) the user can switch to "this device" or
-        // "off", and delete one chat or all of them. Signed out, or with no Supabase config, chats stay on this
-        // device. The adapter reports the user id, so device chats are kept per user on a shared browser.
         chatHistoryMode: "account",
         chatHistoryAdapter: translatorChatHistory(supabaseChatHistoryAdapter),
         chatHistoryFallbackMode: "device",
@@ -53,10 +50,8 @@ export function PageAssistantWidget() {
     return () => {
       cancelled = true;
     };
-  }, [path]);
+  }, []);
 
-  // Re-key chat history when the signed-in user changes without a reload. INITIAL_SESSION is the user init()
-  // already loaded.
   useEffect(() => {
     if (!hasSupabaseConfig()) return;
     const supabase = createClient();
@@ -69,8 +64,6 @@ export function PageAssistantWidget() {
       }
       if (id === lastUserId) return;
       lastUserId = id;
-      // Deferred a tick: supabase-js asks that its own calls wait until this callback has returned, and the
-      // widget's check reads the session.
       setTimeout(() => {
         void import("@page-assistant/widget").then(({ PageAssistant }) => PageAssistant.refreshChatHistory());
       }, 0);

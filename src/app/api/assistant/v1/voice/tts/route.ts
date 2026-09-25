@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { synthesize } from "@page-assistant/server";
 import { assistantRateLimit, requireAssistantUser } from "@/lib/assistant/auth";
+import { publicApiError } from "@/lib/api-error";
 
 export const runtime = "nodejs";
 
@@ -20,6 +21,6 @@ export async function POST(req: NextRequest) {
     const { audio, contentType } = await synthesize(body);
     return new NextResponse(new Uint8Array(audio), { headers: { "content-type": contentType } });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 502 });
+    return NextResponse.json({ error: publicApiError(e, "Voice synthesis is temporarily unavailable.") }, { status: 502 });
   }
 }

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 
-export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://translator.6x7.gr";
+export const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "https://translator.6x7.gr";
 export const SITE_NAME = "Translator";
 
 export function pageMetadata({
