@@ -42,6 +42,4 @@ export const PUBLIC_ROUTES = [
   { path: "/privacy", priority: 0.5 },
   { path: "/terms", priority: 0.5 },
   { path: "/login", priority: 0.6 },
-  { path: "/llm.txt", priority: 0.3 },
-  { path: "/llms.txt", priority: 0.3 },
 ] as const;
