@@ -19,5 +19,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Tests import @page-assistant/* from dist/, so build those packages first.
+      - run: pnpm build:assistant
       - run: pnpm test
       - run: pnpm build
