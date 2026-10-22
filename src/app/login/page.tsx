@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { LogoMark } from "@/components/icons";
 import { SiteFooter } from "@/components/SiteFooter";
+import { GoogleIdentityButton } from "@/components/GoogleIdentityButton";
 
 export default function LoginPage() {
   const supabase = createClient();
@@ -63,14 +64,16 @@ export default function LoginPage() {
           </div>
         ) : (
           <>
-            <button
-              type="button"
-              onClick={signInWithGoogle}
-              className="btn btn-ghost"
-              style={{ width: "100%", marginBottom: "1rem", justifyContent: "center" }}
-            >
-              Continue with Google
-            </button>
+            <GoogleIdentityButton getSupabase={() => supabase} onSignedIn={() => window.location.assign("/app/live")} onError={setError}>
+              <button
+                type="button"
+                onClick={signInWithGoogle}
+                className="btn btn-ghost"
+                style={{ width: "100%", marginBottom: "1rem", justifyContent: "center" }}
+              >
+                Continue with Google
+              </button>
+            </GoogleIdentityButton>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", margin: "1rem 0", color: "var(--fg-muted)", fontSize: "0.8rem" }}>
               <hr style={{ flex: 1, border: 0, borderTop: "1px solid var(--border)" }} />
               or
