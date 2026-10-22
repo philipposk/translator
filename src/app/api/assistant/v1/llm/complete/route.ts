@@ -6,7 +6,8 @@ import { publicApiError } from "@/lib/api-error";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const llm = routerFromEnv();
+// Built lazily so a missing LLM key fails the request, not `next build`.
+let _llm: ReturnType<typeof routerFromEnv> | undefined;
 
 export async function POST(req: NextRequest) {
   const auth = await requireAssistantUser();
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const out = await llm.complete(body);
+    const out = await (_llm ??= routerFromEnv()).complete(body);
     return NextResponse.json(out);
   } catch (e) {
     return NextResponse.json({ error: publicApiError(e, "Assistant is temporarily unavailable.") }, { status: 502 });
