@@ -6,6 +6,7 @@ import { ScrollProgress } from "@/components/ScrollProgress";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { FloatingContact } from "@/components/FloatingContact";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { THEME_BOOT } from "@/lib/theme-boot";
 import { JsonLd } from "@/components/JsonLd";
 import { SITE_NAME, SITE_URL, pageMetadata } from "@/lib/seo";
 import "./globals.css";
@@ -40,6 +41,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${geistSans.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
+        {/* Saved Light / Dark / Auto before first paint: no flash. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         <JsonLd />
       </head>
       <body className="min-h-full">

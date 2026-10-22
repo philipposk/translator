@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { LangPicker } from "@/components/translate/LangPicker";
 import { UsageBar } from "@/components/translate/UsageBar";
+import { ThemeSegments } from "@/components/ThemeProvider";
 
 const ENGINES: { id: SttEngine; label: string; hint: string }[] = [
   { id: "auto", label: "Auto", hint: "Best available engine for your device" },
@@ -118,6 +119,12 @@ export function SettingsClient({ email }: { email: string | null }) {
           )}
         </div>
       )}
+
+      <section className="glass" style={{ padding: "1rem 1.25rem" }} aria-labelledby="appearance-title">
+        <h2 id="appearance-title" style={sectionTitle}>Appearance</h2>
+        <p style={{ opacity: 0.75, fontSize: "0.9rem", margin: "0 0 0.75rem" }}>Auto follows your phone or computer.</p>
+        <ThemeSegments />
+      </section>
 
       <section className="glass" style={{ padding: "1rem 1.25rem" }}>
         <h2 style={sectionTitle}>Plan & usage</h2>
