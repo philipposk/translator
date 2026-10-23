@@ -184,7 +184,7 @@ const paneStyle: React.CSSProperties = {
   fontSize: "1rem",
   lineHeight: 1.55,
   color: "var(--fg)",
-  background: "rgba(20,20,28,0.6)",
+  background: "var(--glass-bg)",
   border: "1px solid var(--border)",
   borderRadius: "1rem",
   resize: "vertical",

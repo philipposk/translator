@@ -35,7 +35,7 @@ function fmtChars(n: number) {
 
 function MeterBar({ pct, danger }: { pct: number; danger: boolean }) {
   return (
-    <div style={{ height: 6, borderRadius: 9999, background: "rgba(255,255,255,0.08)", overflow: "hidden", flex: 1, minWidth: "6rem" }}>
+    <div style={{ height: 6, borderRadius: 9999, background: "var(--track)", overflow: "hidden", flex: 1, minWidth: "6rem" }}>
       <div
         style={{
           width: `${pct}%`,
@@ -79,7 +79,7 @@ export function UsageBar() {
             padding: "0.15rem 0.55rem",
             borderRadius: "9999px",
             background: "var(--accent)",
-            color: "#000",
+            color: "var(--on-accent)",
           }}
         >
           {u.plan}

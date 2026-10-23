@@ -95,7 +95,7 @@ export default function LoginPage() {
                   padding: "0.65rem 0.85rem",
                   borderRadius: "var(--btn-radius)",
                   border: "1px solid var(--border)",
-                  background: "rgba(255,255,255,0.04)",
+                  background: "var(--input-bg)",
                   color: "var(--fg)",
                   marginBottom: "0.75rem",
                   fontSize: "0.9rem",

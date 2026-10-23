@@ -38,7 +38,7 @@ export function AuthButton() {
           gap: "0.75rem",
           padding: "0.35rem 0.75rem",
           borderRadius: "var(--btn-radius)",
-          border: "1px solid rgba(255,255,255,0.1)",
+          border: "1px solid var(--border)",
           fontSize: "0.8rem",
         }}
       >
@@ -67,7 +67,7 @@ export function AuthButton() {
       style={{
         padding: "0.4rem 0.9rem",
         borderRadius: "var(--btn-radius)",
-        border: "1px solid rgba(255,255,255,0.1)",
+        border: "1px solid var(--border)",
         fontSize: "0.8rem",
         color: "var(--fg)",
         textDecoration: "none",
