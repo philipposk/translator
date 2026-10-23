@@ -12,6 +12,8 @@ jobs:
     env:
       # Build-time placeholder; the app only checks a key is present at build.
       OPENROUTER_API_KEY: ci-placeholder
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
