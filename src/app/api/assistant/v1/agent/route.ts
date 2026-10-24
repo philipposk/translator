@@ -15,17 +15,20 @@ import { publicApiError } from "@/lib/api-error";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const llm = routerFromEnv();
 const tickets = new MemoryTicketStore();
-const assistant = new Assistant({
+// Built lazily so a missing LLM key fails the request, not `next build`.
+let _assistant: Assistant | undefined;
+function getAssistant(): Assistant {
+  return (_assistant ??= new Assistant({
   capabilities: serverCapabilities(),
-  llm,
+  llm: routerFromEnv(),
   memory: new InMemoryStore(),
   appName: "Translator",
   persona: "You are the grounded in-app assistant for Translator. Be concise and helpful.",
   knowledge: ASSISTANT_KNOWLEDGE,
   suggestions: ASSISTANT_SUGGESTIONS,
-});
+}));
+}
 
 export async function POST(req: NextRequest) {
   const auth = await requireAssistantUser();
@@ -37,7 +40,7 @@ export async function POST(req: NextRequest) {
     const { message, page, history, source } = await req.json();
     if (!message) return NextResponse.json({ error: "message required" }, { status: 400 });
     const meta = assistantMeta();
-    const result = await assistant.chat({
+    const result = await getAssistant().chat({
       message,
       page: {
         ...(page ?? { url: meta.appUrl, path: "/" }),

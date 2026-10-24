@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 import { sharedCookieOptions } from "@/lib/supabase/cookies";
+import { trackAppAccess } from "./app-access";
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -27,7 +28,8 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getUser();
+  const { data: { user: __u } } = await supabase.auth.getUser();
+  await trackAppAccess(supabase, __u, request, response, "translator");
   return response;
 }
 
