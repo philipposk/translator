@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { LangPicker } from "@/components/translate/LangPicker";
 import { UsageBar } from "@/components/translate/UsageBar";
+import { ThemeSegments } from "@/components/ThemeProvider";
 
 const ENGINES: { id: SttEngine; label: string; hint: string }[] = [
   { id: "auto", label: "Auto", hint: "Best available engine for your device" },
@@ -119,6 +120,12 @@ export function SettingsClient({ email }: { email: string | null }) {
         </div>
       )}
 
+      <section className="glass" style={{ padding: "1rem 1.25rem" }} aria-labelledby="appearance-title">
+        <h2 id="appearance-title" style={sectionTitle}>Appearance</h2>
+        <p style={{ opacity: 0.75, fontSize: "0.9rem", margin: "0 0 0.75rem" }}>Auto follows your phone or computer.</p>
+        <ThemeSegments />
+      </section>
+
       <section className="glass" style={{ padding: "1rem 1.25rem" }}>
         <h2 style={sectionTitle}>Plan & usage</h2>
         <UsageBar />
@@ -170,7 +177,7 @@ export function SettingsClient({ email }: { email: string | null }) {
             style={selectStyle}
           >
             {WORKSPACE_MODES.map((m) => (
-              <option key={m.id} value={m.id} style={{ background: "#15151c" }}>{m.label}</option>
+              <option key={m.id} value={m.id} style={{ background: "var(--option-bg)" }}>{m.label}</option>
             ))}
           </select>
         </Row>
@@ -180,8 +187,8 @@ export function SettingsClient({ email }: { email: string | null }) {
             onChange={(e) => { const v = e.target.value as LiveMode; setLiveMode(v); setSettings({ liveMode: v }); }}
             style={selectStyle}
           >
-            <option value="conversation" style={{ background: "#15151c" }}>Conversation</option>
-            <option value="captions" style={{ background: "#15151c" }}>Captions</option>
+            <option value="conversation" style={{ background: "var(--option-bg)" }}>Conversation</option>
+            <option value="captions" style={{ background: "var(--option-bg)" }}>Captions</option>
           </select>
         </Row>
         <Row label="Default source language">
@@ -198,7 +205,7 @@ export function SettingsClient({ email }: { email: string | null }) {
             title={ENGINES.find((x) => x.id === engine)?.hint}
           >
             {ENGINES.filter((x) => x.id !== "deepgram" || engines?.stt.deepgramConfigured).map((x) => (
-              <option key={x.id} value={x.id} style={{ background: "#15151c" }}>{x.label}</option>
+              <option key={x.id} value={x.id} style={{ background: "var(--option-bg)" }}>{x.label}</option>
             ))}
           </select>
         </Row>
@@ -207,7 +214,7 @@ export function SettingsClient({ email }: { email: string | null }) {
             type="button"
             onClick={() => { const v = !convAuto; setConvAuto(v); setSettings({ convAuto: v }); }}
             className="btn"
-            style={{ padding: "0.35rem 0.9rem", background: convAuto ? "var(--accent)" : "rgba(255,255,255,0.06)", color: convAuto ? "#000" : "var(--fg-muted)" }}
+            style={{ padding: "0.35rem 0.9rem", background: convAuto ? "var(--accent)" : "var(--chip-bg)", color: convAuto ? "var(--on-accent)" : "var(--fg-muted)" }}
           >
             {convAuto ? "On" : "Off"}
           </button>
@@ -217,7 +224,7 @@ export function SettingsClient({ email }: { email: string | null }) {
             type="button"
             onClick={() => { const v = !convAlternate; setConvAlternate(v); setSettings({ convAlternate: v }); }}
             className="btn"
-            style={{ padding: "0.35rem 0.9rem", background: convAlternate ? "var(--accent)" : "rgba(255,255,255,0.06)", color: convAlternate ? "#000" : "var(--fg-muted)" }}
+            style={{ padding: "0.35rem 0.9rem", background: convAlternate ? "var(--accent)" : "var(--chip-bg)", color: convAlternate ? "var(--on-accent)" : "var(--fg-muted)" }}
             title="After each phrase, listen for the other language (manual mode)"
           >
             {convAlternate ? "On" : "Off"}
@@ -228,7 +235,7 @@ export function SettingsClient({ email }: { email: string | null }) {
             type="button"
             onClick={() => { const v = !flipSide; setFlipSide(v); setSettings({ flipSide: v }); }}
             className="btn"
-            style={{ padding: "0.35rem 0.9rem", background: flipSide ? "var(--accent)" : "rgba(255,255,255,0.06)", color: flipSide ? "#000" : "var(--fg-muted)" }}
+            style={{ padding: "0.35rem 0.9rem", background: flipSide ? "var(--accent)" : "var(--chip-bg)", color: flipSide ? "var(--on-accent)" : "var(--fg-muted)" }}
           >
             {flipSide ? "On" : "Off"}
           </button>
@@ -299,4 +306,4 @@ export function SettingsClient({ email }: { email: string | null }) {
 }
 
 const sectionTitle: React.CSSProperties = { fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--fg-muted)", margin: "0.5rem 0 0.25rem", fontWeight: 700 };
-const selectStyle: React.CSSProperties = { padding: "0.4rem 0.75rem", borderRadius: "0.6rem", border: "1px solid var(--border)", background: "rgba(255,255,255,0.04)", color: "var(--fg)", fontSize: "0.85rem", fontWeight: 600 };
+const selectStyle: React.CSSProperties = { padding: "0.4rem 0.75rem", borderRadius: "0.6rem", border: "1px solid var(--border)", background: "var(--input-bg)", color: "var(--fg)", fontSize: "0.85rem", fontWeight: 600 };

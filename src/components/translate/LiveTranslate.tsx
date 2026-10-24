@@ -433,8 +433,8 @@ function Dot() {
 function pill(active: boolean): React.CSSProperties {
   return {
     padding: "0.4rem 1rem",
-    background: active ? "var(--accent)" : "rgba(255,255,255,0.05)",
-    color: active ? "#000" : "var(--fg-muted)",
+    background: active ? "var(--accent)" : "var(--hover)",
+    color: active ? "var(--on-accent)" : "var(--fg-muted)",
     border: "1px solid var(--border)",
   };
 }
