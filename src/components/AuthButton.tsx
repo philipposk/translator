@@ -23,7 +23,7 @@ export function AuthButton() {
 
   async function signOut() {
     const supabase = createClient();
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
     setUser(null);
   }
 
