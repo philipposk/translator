@@ -79,7 +79,7 @@ export function SettingsClient({ email }: { email: string | null }) {
   }, []);
 
   async function signOut() {
-    await createClient().auth.signOut();
+    await createClient().auth.signOut({ scope: "local" });
     window.location.href = "/login";
   }
 

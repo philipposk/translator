@@ -35,7 +35,7 @@ export function Sidebar({ email }: { email?: string | null }) {
   const active = (href: string) => path === href || path.startsWith(href + "/");
 
   async function signOut() {
-    await createClient().auth.signOut();
+    await createClient().auth.signOut({ scope: "local" });
     window.location.href = "/login";
   }
 
